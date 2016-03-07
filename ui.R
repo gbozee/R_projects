@@ -17,15 +17,17 @@ shinyUI(fluidPage(
   # Sidebar with a slider input for number of bins
   sidebarLayout(
     sidebarPanel(
-      actionButton("loadDataset",class="btn btn-block btn-default", "Load Dataset"),
+      actionButton("loadDataset",class="btn btn-block btn-default", "Load Available Dataset"),
       actionButton("uploadDataset",class="btn btn-block btn-default","Upload Dataset"),
-      
-      tags$div(id="l_dataset",
+      tags$div(id="l_dataset",class="hidden",
+               tags$hr(),
                selectInput("oilPrices","Choose a dataset:", 
-                                      choices = c("WTI","Brent"))
+                                      choices = c("WTI","Brent")),
+               actionButton("displayAction","Display Dataset as Table",class="displayAction btn-primary center-block")
                ),
-      tags$div(id="u_dataset",
+      tags$div(id="u_dataset",class="hidden",
       	tags$div(
+      	    tags$hr(),
       		   fileInput('fileUploaded', 'Choose file to upload',
                          accept = c(
                            'text/csv',
@@ -36,14 +38,31 @@ shinyUI(fluidPage(
                            '.tsv')
                          )
                ),
-               tags$hr(),
 			   checkboxInput('header', 'Header', TRUE),
-			   radioButtons('sep', 'Separator', c(Comma=',',Semicolon=';',Tab='\t'),',')
-      	) 
+			   radioButtons('sep', 'Separator', c(Comma=',',Semicolon=';',Tab='\t'),','),
+			   actionButton("displayAction","Display Dataset as Table",class="displayAction btn-primary center-block")
+      	),
+      tags$hr(),
+      tags$div(id="model_section",class="hidden",
+               selectInput("modelSelection","Select a model",
+                           choices=c("Linear Model","Time Series")),
+               checkboxGroupInput("variableToForcast","Select Variable to Forcast",
+                                  choices = c("Price"="price",
+                                              "Dist" = "Dist")),
+               actionButton("visualizeAction","Visualize Dataset",class="btn-info center-block")
+               )
     ),   
     # Show a plot of the generated distribution
     mainPanel(
-      plotOutput("distPlot")
+      tabsetPanel("tabsets",
+                  tabPanel("table", 
+                           tableOutput("table_output"),
+                           h2("This is the first panel.")),
+                  tabPanel("visualization", 
+                           plotOutput('plot_output'),
+                           h2("This is the second panel."),
+                           tableOutput("predicted_table"))
+                  )
     )
   )
 ))
