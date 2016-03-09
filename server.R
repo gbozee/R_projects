@@ -13,8 +13,10 @@ require(EIAdata)
 key<-("95365B2462BFD45A96D4EB0DBC60E59A")
 oil<-getEIA("PET.RBRTE.M",key)
 oilp<-ts(oil[,"PET.RBRTE.M"],start=c(1987,5),freq=12)
-eiaoilp<-data.frame(date=as.Date(as.yearmon(time(oilp))),price=as.matrix(oilp))
-colnames(eiaoilp) <- c("date","price")
+#eiaoilp<-data.frame(date=as.Date(as.yearmon(time(oilp))),price=as.matrix(oilp)) # i need to fix this bug
+eiaoilp<-data.frame(price=as.matrix(oilp),date=as.Date(as.yearmon(time(oilp)))) # i need to fix this bug
+#colnames(eiaoilp) <- c("date","price")
+colnames(eiaoilp) <- c("price","date")
 
 brentoilprice<-Quandl("ODA/POILBRE_USD",type = "ts")
 wtioilprice<-Quandl("ODA/POILWTI_USD",type = "ts")
@@ -35,19 +37,20 @@ shinyServer(function(input, output,session) {
   observeEvent(input$uploadDataset,{
     updateTextInput(session,"actionSelected",value= "uploadDataset")
   })
+  plotter <- '' # name of final dataframe to visualize
   observeEvent(input$displayAction,{
     cat("hello")
     if(input$actionSelected == "uploadDataset"){
         inFile <- input$fileUploaded
         if (is.null(inFile))
           return(NULL)
-        csv_file <-read.csv(inFile$datapath, header=input$header, sep=input$sep, 
+        plotter <-read.csv(inFile$datapath, header=input$header, sep=input$sep, 
                             quote=input$quote)
         output$table_output <- renderTable({
-          csv_file
+          plotter
         })
         observe({
-          new_options <- colnames(csv_file)
+          new_options <- colnames(plotter)
           new_options <- new_options[2:length(new_options)]
           updateCheckboxGroupInput(session,"variableToForcast",
                                    choices=new_options)
@@ -61,28 +64,53 @@ shinyServer(function(input, output,session) {
                "woilp" = woilp
         )
       })
+      plotter<-datasetInput()
       output$table_output <- renderTable({
-        u<-datasetInput()
-        u$date <- format(u$date,'%Y-%m-%d')
-        u
+        plotter$date <- format(plotter$date,'%Y-%m-%d')
+        plotter
       })  
       observe({
-        new_options <- colnames(datasetInput())
-        new_options <- new_options[2:length(new_options)]
+        #plotter<-datasetInput()
+        new_options <- colnames(plotter)
+        new_options <- new_options[1:length(new_options)-1]
         updateCheckboxGroupInput(session,"variableToForcast",
-                                 choices=new_options)
+                                 choices=new_options,selected = new_options[1])
       })
     }
   })
-  output$distPlot <- renderPlot({
+  observeEvent(input$visualizeAction,{
+    if (is.null(plotter))
+      return(NULL)
 
-    # generate bins based on input$bins from ui.R
-    x    <- faithful[, 2]
-    bins <- seq(min(x), max(x), length.out = input$bins + 1)
-
-    # draw the histogram with the specified number of bins
-    hist(x, breaks = bins, col = 'darkgray', border = 'white')
-
+    if(input$actionSelected == "uploadDataset"){
+      inFile <- input$fileUploaded
+      if (is.null(inFile))
+        return(NULL)
+      plotter <-read.csv(inFile$datapath, header=input$header, sep=input$sep, 
+                         quote=input$quote)
+    }else{
+      datasetInput <- reactive({
+        # This is where you would put the dataset options that you want to download
+        switch(input$oilPrices,
+               "eiaoilp" = eiaoilp,
+               "boilp" = boilp,
+               "woilp" = woilp
+        )
+      })
+      plotter <- datasetInput()
+    }
+    output$plot_output <- renderPlot({
+      # generate bins based on input$bins from ui.R
+      f <- paste(names(plotter)[1], "~", paste(names(plotter)[-1]))
+      plotter$predicted <- predict(lm(f,data=plotter))
+      theGraph <- ggplot(plotter,aes_string(x=plotter$date,y=input$variableToForcast
+                                            )) +
+        ylab("Oil Prices Values") + xlab("Years")
+      new_graph <- theGraph +geom_line(colour="blue") + 
+        geom_line(aes(y=plotter$predicted))
+      
+      new_graph
+    })
   })
 
 })

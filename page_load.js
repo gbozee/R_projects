@@ -16,4 +16,9 @@ $(document).ready(function(){
   $(".displayAction").click(function(e){
     $('#model_section').removeClass("hidden");
   })
+  $("#visualizeAction").click(function(e){
+    var tabs = $('.tabbable .nav.nav-tabs li a');
+    console.log(tabs);
+    $(tabs[1]).click();
+  })
 });
