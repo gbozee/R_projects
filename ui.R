@@ -17,43 +17,49 @@ shinyUI(fluidPage(theme = "app.css", #css file to further style the page
   # Sidebar with a slider input for number of bins
   sidebarLayout(
     sidebarPanel(
-      textInput("actionSelected",label = ''),
-      actionButton("loadDataset",class="btn btn-block btn-default", "Load Available Dataset"),
-      actionButton("uploadDataset",class="btn btn-block btn-default","Upload Dataset"),
-      
-      tags$div(class="set_container hidden",
-        tags$div(id="l_dataset",class="hidden",
-                 tags$hr(),
-                 selectInput("oilPrices","Choose a dataset:", 
-                             choices = c("WTI","Brent"))
-                 #actionButton("displayAction","Display Dataset as Table",class="displayAction btn-primary center-block")
-        ),
-      	tags$div(id="u_dataset",class="hidden",
-      	    tags$hr(),
-      		   fileInput('fileUploaded', 'Choose file to upload',
-                         accept = c(
-                           'text/csv',
-                           'text/comma-separated-values',
-                           'text/tab-separated-values',
-                           'text/plain',
-                           '.csv',
-                           '.tsv')
-                         ),
-      	    checkboxInput('header', 'Header', TRUE),
-      	    radioButtons('sep', 'Separator', c(Comma=',',Semicolon=';',Tab='\t'),',')
-      	    ),
-        actionButton("displayAction","Display Dataset as Table",class="displayAction btn-primary center-block")   
-        
-      	),
-      tags$hr(),
-      tags$div(id="model_section",class="hidden",
-               selectInput("modelSelection","Select a model",
-                           choices=c("Linear Model","Time Series")),
-               checkboxGroupInput("variableToForcast","Select Variable to Forcast",
-                                  choices = c("Price"="price",
-                                              "Dist" = "Dist")),
-               actionButton("visualizeAction","Visualize Dataset",class="btn-info center-block")
-               )
+        tags$div(id="table_sidebar",
+            textInput("actionSelected",label = ''),
+            actionButton("loadDataset",class="btn btn-block btn-default", "Load Available Dataset"),
+            actionButton("uploadDataset",class="btn btn-block btn-default","Upload Dataset"),        
+            tags$div(class="set_container hidden",
+                tags$div(id="l_dataset",class="hidden",
+                        tags$hr(),
+                        selectInput("oilPrices","Choose a dataset:", 
+                                    choices = c("WTI","Brent"))
+                        #actionButton("displayAction","Display Dataset as Table",class="displayAction btn-primary center-block")
+                        ),
+                tags$div(id="u_dataset",class="hidden",
+                        tags$hr(),
+                        fileInput('fileUploaded', 'Choose file to upload',
+                                accept = c(
+                                'text/csv',
+                                'text/comma-separated-values',
+                                'text/tab-separated-values',
+                                'text/plain',
+                                '.csv',
+                                '.tsv')
+                                ),
+                        checkboxInput('header', 'Header', TRUE),
+                        radioButtons('sep', 'Separator', c(Comma=',',Semicolon=';',Tab='\t'),',')
+                        ),
+                actionButton("displayAction","Display Dataset as Table",class="displayAction btn-primary center-block")   
+                
+                ),
+            tags$hr(),
+            tags$div(id="model_section",class="hidden",
+                    selectInput("modelSelection","Select a model",
+                                choices=c("Linear Model","Time Series")),
+                    checkboxGroupInput("variableToForcast","Select Variable to Forcast",
+                                        choices = c("Price"="price",
+                                                    "Dist" = "Dist")),
+                    actionButton("visualizeAction","Visualize Dataset",class="btn-info center-block")
+                    )
+                ),
+    tags$div(id="visual_sidebar",class="hidden",
+        sliderInput("yearSlider", "Years:",
+                  min = 0, max = 10000, value = c(200,500), step = 10,
+                   sep = "", animate=TRUE)
+        )
     ),   
     # Show a plot of the generated distribution
     mainPanel(
@@ -62,7 +68,7 @@ shinyUI(fluidPage(theme = "app.css", #css file to further style the page
                            tags$p(),
                            tableOutput("table_output"),
                            h2("This is the first panel.")),
-                  tabPanel("visualization", 
+                  tabPanel("visualization",
                            plotOutput('plot_output'),
                            h2("This is the second panel."),
                            tableOutput("predicted_table"))

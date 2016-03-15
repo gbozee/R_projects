@@ -10,21 +10,37 @@ library(Quandl)
 library(ggplot2)
 require(EIAdata)
 
+# Fetch datasets
 key<-("95365B2462BFD45A96D4EB0DBC60E59A")
 oil<-getEIA("PET.RBRTE.M",key)
 oilp<-ts(oil[,"PET.RBRTE.M"],start=c(1987,5),freq=12)
-#eiaoilp<-data.frame(date=as.Date(as.yearmon(time(oilp))),price=as.matrix(oilp)) # i need to fix this bug
-eiaoilp<-data.frame(price=as.matrix(oilp),date=as.Date(as.yearmon(time(oilp)))) # i need to fix this bug
-#colnames(eiaoilp) <- c("date","price")
-colnames(eiaoilp) <- c("price","date")
-
 brentoilprice<-Quandl("ODA/POILBRE_USD",type = "ts")
 wtioilprice<-Quandl("ODA/POILWTI_USD",type = "ts")
-#the names of the columns are price and date.
+
+eiaoilp<-data.frame(price=as.matrix(oilp),date=as.Date(as.yearmon(time(oilp)))) # i need to fix this bug
 boilp<-data.frame(price=as.matrix(brentoilprice),date=as.Date(as.yearmon(time(brentoilprice)))) 
 woilp<-data.frame(price=as.matrix(wtioilprice),date=as.Date(as.yearmon(time(wtioilprice)))) #from ts to data.frame
 
+# order of table. order date in decreasing order
+eiaoilp <- eiaoilp[order(eiaoilp$date,decreasing = TRUE),]
+boilp <- boilp[order(boilp$date,decreasing = TRUE),]
+woilp <- woilp[order(woilp$date,decreasing = TRUE),]
+
+#the names of the columns are price and date.
+colnames(eiaoilp) <- c("price","date")
+
+# get the years only with no duplicate
+# unique function removes duplicates
+eia_years <- unique(as.numeric(format(eiaoilp$date,"%Y")))
+bo_years <- unique(as.numeric(format(boilp$date,"%Y")))
+wo_years <- unique(as.numeric(format(woilp$date,"%Y")))
+
+
 shinyServer(function(input, output,session) {
+  plotter <- '' # name of final dataframe to visualize
+  slider_component <- NULL
+  
+  # EVENT LISTENERS  
   observeEvent(input$loadDataset,{
     updateTextInput(session,"actionSelected",value= "loadDataset")
     observe({
@@ -34,12 +50,12 @@ shinyServer(function(input, output,session) {
                                     "W OIL" = "woilp"))
     })
   })
+  
   observeEvent(input$uploadDataset,{
     updateTextInput(session,"actionSelected",value= "uploadDataset")
   })
-  plotter <- '' # name of final dataframe to visualize
+  
   observeEvent(input$displayAction,{
-    cat("hello")
     if(input$actionSelected == "uploadDataset"){
         inFile <- input$fileUploaded
         if (is.null(inFile))
@@ -57,7 +73,6 @@ shinyServer(function(input, output,session) {
         })
     }else{
       datasetInput <- reactive({
-        # This is where you would put the dataset options that you want to download
         switch(input$oilPrices,
                "eiaoilp" = eiaoilp,
                "boilp" = boilp,
@@ -69,12 +84,21 @@ shinyServer(function(input, output,session) {
         plotter$date <- format(plotter$date,'%Y-%m-%d')
         plotter
       })  
+      yearSelection <- reactive({
+            switch(input$oilPrices,
+            "eiaoilp" = eia_years,
+            "boilp" = bo_years,
+            "woilp" = wo_years)
+        })
+      slider_component <- yearSelection()
       observe({
         #plotter<-datasetInput()
         new_options <- colnames(plotter)
         new_options <- new_options[1:length(new_options)-1]
         updateCheckboxGroupInput(session,"variableToForcast",
                                  choices=new_options,selected = new_options[1])
+        updateSliderInput(session,"yearSlider",min=min(slider_component),max=max(slider_component),
+                        step=1,value = c(min(slider_component),max(slider_component)))
       })
     }
   })
@@ -97,10 +121,15 @@ shinyServer(function(input, output,session) {
                "woilp" = woilp
         )
       })
-      plotter <- datasetInput()
+     plotter <- datasetInput() 
+     cat(input$yearSlider[1])
     }
     output$plot_output <- renderPlot({
       # generate bins based on input$bins from ui.R
+      # reduces the date to the specified slider
+    #   cat(input$yearSlider)
+      plotter <- plotter[which(plotter$date >= as.Date(as.character(input$yearSlider[1]),"%Y") & 
+                                plotter$date <= as.Date(as.character(input$yearSlider[2]),"%Y")),]
       f <- paste(names(plotter)[1], "~", paste(names(plotter)[-1]))
       plotter$predicted <- predict(lm(f,data=plotter))
       theGraph <- ggplot(plotter,aes_string(x=plotter$date,y=input$variableToForcast
