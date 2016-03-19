@@ -130,14 +130,18 @@ shinyServer(function(input, output,session) {
     #   cat(input$yearSlider)
       plotter <- plotter[which(plotter$date >= as.Date(as.character(input$yearSlider[1]),"%Y") & 
                                 plotter$date <= as.Date(as.character(input$yearSlider[2]),"%Y")),]
-      f <- paste(names(plotter)[1], "~", paste(names(plotter)[-1]))
-      plotter$predicted <- predict(lm(f,data=plotter))
       theGraph <- ggplot(plotter,aes_string(x=plotter$date,y=input$variableToForcast
                                             )) +
         ylab("Oil Prices Values") + xlab("Years")
-      new_graph <- theGraph +geom_line(colour="blue") + 
-        geom_line(aes(y=plotter$predicted))
-      
+      if(input$modelSelection == "linear_model"){
+        f <- paste(names(plotter)[1], "~", paste(names(plotter)[-1]))
+        plotter$predicted <- predict(lm(f,data=plotter))
+                
+        new_graph <- theGraph +geom_line(colour="blue") + 
+            geom_line(aes(y=plotter$predicted))          
+      }else{        
+        new_graph <- theGraph +geom_line(colour="blue") 
+      }      
       new_graph
     })
   })
