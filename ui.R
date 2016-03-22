@@ -50,7 +50,7 @@ shinyUI(fluidPage(theme = "app.css", #css file to further style the page
                     selectInput("modelSelection","Select a model",
                                 choices=c("None" = "none",
                                     "Linear Model"="linear_model",
-                                           "Time Series"="ts_model")),
+                                           "Time Series (Holt Winters)"="holt_winters")),
                     checkboxGroupInput("variableToForcast","Select Variable to Forcast",
                                         choices = c("Price"="price",
                                                     "Dist" = "Dist")),

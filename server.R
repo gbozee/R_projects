@@ -8,6 +8,28 @@
 library(shiny)
 library(Quandl)
 library(ggplot2)
+source("./HWplot.R")
+
+plotGraph <- function(plotter,variableToForcast,model_type='',start_year=1980){
+  theGraph <- ggplot(plotter,aes_string(x=plotter$date,y=variableToForcast
+  )) +
+    ylab("Oil Prices Values") + xlab("Years")
+  if(model_type == "linear_model"){
+    f <- paste(names(plotter)[1], "~", paste(names(plotter)[-1]))
+    plotter$predicted <- predict(lm(f,data=plotter))
+    
+    new_graph <- theGraph +geom_line(colour="blue") + 
+      geom_line(aes(y=plotter$predicted))
+  }else if(model_type == 'holt_winters'){
+    # convert data from data_frame to time series
+    ts_data = ts(plotter$price,start=c(start_year,1),frequency = 12)
+    # function that predicts future values and returns a plot object
+    new_graph <- HWplot(ts_data,n.ahead=12)
+  }else{        
+    new_graph <- theGraph +geom_line(colour="blue") 
+  }      
+  return(new_graph)
+}
 require(EIAdata)
 
 # Fetch datasets
@@ -130,18 +152,20 @@ shinyServer(function(input, output,session) {
     #   cat(input$yearSlider)
       plotter <- plotter[which(plotter$date >= as.Date(as.character(input$yearSlider[1]),"%Y") & 
                                 plotter$date <= as.Date(as.character(input$yearSlider[2]),"%Y")),]
-      theGraph <- ggplot(plotter,aes_string(x=plotter$date,y=input$variableToForcast
-                                            )) +
-        ylab("Oil Prices Values") + xlab("Years")
-      if(input$modelSelection == "linear_model"){
-        f <- paste(names(plotter)[1], "~", paste(names(plotter)[-1]))
-        plotter$predicted <- predict(lm(f,data=plotter))
+      new_graph <- plotGraph(plotter,input$variableToForcast,model_type = input$modelSelection,
+                             start_year = input$yearSlider[1])
+      #theGraph <- ggplot(plotter,aes_string(x=plotter$date,y=input$variableToForcast
+      #                                      )) +
+      #  ylab("Oil Prices Values") + xlab("Years")
+      #if(input$modelSelection == "linear_model"){
+      #  f <- paste(names(plotter)[1], "~", paste(names(plotter)[-1]))
+      #  plotter$predicted <- predict(lm(f,data=plotter))
                 
-        new_graph <- theGraph +geom_line(colour="blue") + 
-            geom_line(aes(y=plotter$predicted))          
-      }else{        
-        new_graph <- theGraph +geom_line(colour="blue") 
-      }      
+      #  new_graph <- theGraph +geom_line(colour="blue") + 
+      #      geom_line(aes(y=plotter$predicted))          
+      #}else{        
+      #  new_graph <- theGraph +geom_line(colour="blue") 
+      #}      
       new_graph
     })
   })
