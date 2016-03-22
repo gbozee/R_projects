@@ -84,6 +84,7 @@ shinyServer(function(input, output,session) {
         plotter$date <- format(plotter$date,'%Y-%m-%d')
         plotter
       })  
+      # this is important for the slider in the visualization tab.
       yearSelection <- reactive({
             switch(input$oilPrices,
             "eiaoilp" = eia_years,
@@ -134,6 +135,7 @@ shinyServer(function(input, output,session) {
                                             )) +
         ylab("Oil Prices Values") + xlab("Years")
       if(input$modelSelection == "linear_model"){
+        # price ~ date 
         f <- paste(names(plotter)[1], "~", paste(names(plotter)[-1]))
         plotter$predicted <- predict(lm(f,data=plotter))
                 

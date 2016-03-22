@@ -24,6 +24,7 @@ shinyUI(fluidPage(theme = "app.css", #css file to further style the page
             tags$div(class="set_container hidden",
                 tags$div(id="l_dataset",class="hidden",
                         tags$hr(),
+                        # default select input before the server loads the dataset
                         selectInput("oilPrices","Choose a dataset:", 
                                     choices = c("WTI","Brent"))
                         #actionButton("displayAction","Display Dataset as Table",class="displayAction btn-primary center-block")
