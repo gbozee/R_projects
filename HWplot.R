@@ -4,7 +4,7 @@ library(reshape)
 library(forecast)
 
 
-funggcast<-function(dn,data_point=12,is.date = NULL, ts.connect = TRUE,
+funggcast<-function(dn,data_point=12,f_type="holt_winters",is.date = NULL, ts.connect = TRUE,
                               predict.geom = 'line',
                               predict.colour = '#0000FF', predict.size = NULL,
                               predict.linetype = NULL, predict.alpha = NULL,
@@ -13,7 +13,13 @@ funggcast<-function(dn,data_point=12,is.date = NULL, ts.connect = TRUE,
                               conf.int.colour = '#0000FF', conf.int.linetype = 'none',
                               conf.int.fill = '#000000', conf.int.alpha = 0.3,...){ 
 	require(zoo) #needed for the 'as.yearmon()' function
-    fcast <- forecast.HoltWinters(HoltWinters(dn), h=data_point)
+    if(f_type == "holt_winters"){
+        fcast <- forecast.HoltWinters(HoltWinters(dn), h=data_point)
+        cat("holt_winters")        
+    }else{
+        fcast <- forecast(auto.arima(dn), h=data_point)
+        cat("arima")    
+    }
     ds <- ggplot2::fortify(fcast, is.date = is.date, ts.connect = ts.connect)
     # replace whitespace to underscore to make column name handling easie
     colnames(ds) <- sub(' ', '_', colnames(ds))
@@ -47,6 +53,17 @@ funggcast<-function(dn,data_point=12,is.date = NULL, ts.connect = TRUE,
 	# return(pd)
     return(ds)
  
+}
+ArimaPlot<-function(ts_object,  n.ahead=4,  CI=.95,  error.ribbon='green', line.size=1){
+    graphset <- funggcast(ts_object,data_point=n.ahead,f_type="arima")
+  p <- ggplot(graphset,aes(date,observed)) + 
+       geom_line(color="red") + 
+       geom_line(aes(y=fitted)) + 
+       geom_line(color="blue") + 
+       geom_line(aes(y = forecast)) + 
+       geom_ribbon(aes(ymin = lo95, ymax = hi95), alpha = .25) +
+       ylab("Oil Prices Values") + xlab("Years")
+       return(p)
 }
 HWplot<-function(ts_object,  n.ahead=4,  CI=.95,  error.ribbon='green', line.size=1){
   

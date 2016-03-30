@@ -11,23 +11,31 @@ library(ggfortify)
 library(ggplot2)
 # import this file which plots graph for predicted values
 source("./HWplot.R")
+source("./fetch_dataset.R")
 
 plotGraph <- function(plotter,variableToForcast,model_type='',start_year=1980){
-  theGraph <- ggplot(plotter,aes_string(x=plotter$date,y=variableToForcast
+  theGraph <- ggplot(plotter,aes_string(x=plotter$DATE,y=variableToForcast
+#   theGraph <- ggplot(plotter,aes(x=plotter$DATE,y=variableToForcast
   )) +
     ylab("Oil Prices Values") + xlab("Years") +geom_line(colour="blue")
   if(model_type == "linear_model"){
-    f <- paste(names(plotter)[1], "~", paste(names(plotter)[-1]))
-    plotter$predicted <- predict(lm(f,data=plotter))
-    
-    new_graph <- theGraph + geom_line(aes(y=plotter$predicted))
-  }else if(model_type == 'holt_winters'){
+    f <- paste(names(plotter)[2], "~", paste(names(plotter)[3]))
+    plotter$predicted <- predict(lm(f,data=plotter))    
+    new_graph <- theGraph + 
+        geom_line(aes(y=plotter$predicted))
+  }
+  if(model_type == 'holt_winters'){
     # convert data from data_frame to time series
     ts_data = ts(plotter$price,start=c(start_year,1),frequency = 12)
     # function that predicts future values and returns a plot object
     # spent the whole night writing this function
     new_graph <- HWplot(ts_data) 
-  }else{        
+  }
+  if(model_type == "arima"){
+      ts_data = ts(plotter$price,start=c(start_year,1),frequency = 12)
+      new_graph <- ArimaPlot(ts_data)
+  }
+  if(model_type == ''){        
     new_graph <- theGraph 
   }      
   return(new_graph)
@@ -35,29 +43,23 @@ plotGraph <- function(plotter,variableToForcast,model_type='',start_year=1980){
 require(EIAdata)
 
 # Fetch datasets
-key<-("95365B2462BFD45A96D4EB0DBC60E59A")
-oil<-getEIA("PET.RBRTE.M",key)
-oilp<-ts(oil[,"PET.RBRTE.M"],start=c(1987,5),freq=12)
-brentoilprice<-Quandl("ODA/POILBRE_USD",type = "ts")
-wtioilprice<-Quandl("ODA/POILWTI_USD",type = "ts")
-
-eiaoilp<-data.frame(price=as.matrix(oilp),date=as.Date(as.yearmon(time(oilp)))) # i need to fix this bug
-boilp<-data.frame(price=as.matrix(brentoilprice),date=as.Date(as.yearmon(time(brentoilprice)))) 
-woilp<-data.frame(price=as.matrix(wtioilprice),date=as.Date(as.yearmon(time(wtioilprice)))) #from ts to data.frame
+d_eiaoilp<-read.table("./daily.csv",header=TRUE,sep=",")[,c("date","price")]
+w_eiaoilp<-read.table("./weekly.csv",header=TRUE,sep=",")[,c("date","price")]
+m_eiaoilp<-read.table("./monthly.csv",header=TRUE,sep=",")[,c("date","price")]
 
 # order of table. order date in decreasing order
-eiaoilp <- eiaoilp[order(eiaoilp$date,decreasing = TRUE),]
-boilp <- boilp[order(boilp$date,decreasing = TRUE),]
-woilp <- woilp[order(woilp$date,decreasing = TRUE),]
-
-#the names of the columns are price and date.
-colnames(eiaoilp) <- c("price","date")
+d_eiaoilp_rev <- d_eiaoilp[order(d_eiaoilp$date,decreasing = TRUE),]
+w_eiaoilp_rev <- w_eiaoilp[order(w_eiaoilp$date,decreasing = TRUE),]
+m_eiaoilp_rev <- m_eiaoilp[order(m_eiaoilp$date,decreasing = TRUE),]
+# boilp <- boilp[order(boilp$date,decreasing = TRUE),]
+# woilp <- woilp[order(woilp$date,decreasing = TRUE),]
 
 # get the years only with no duplicate
 # unique function removes duplicates
-eia_years <- unique(as.numeric(format(eiaoilp$date,"%Y")))
-bo_years <- unique(as.numeric(format(boilp$date,"%Y")))
-wo_years <- unique(as.numeric(format(woilp$date,"%Y")))
+eia_years <- unique(as.numeric(format(as.yearmon(m_eiaoilp$date),"%Y")))
+# eia_years <- unique(as.numeric(format(as.Date(as.yearmon(time(m_eiaoilp$date))),"%Y")))
+# bo_years <- unique(as.numeric(format(boilp$date,"%Y")))
+# wo_years <- unique(as.numeric(format(woilp$date,"%Y")))
 
 
 shinyServer(function(input, output,session) {
@@ -67,12 +69,15 @@ shinyServer(function(input, output,session) {
   # EVENT LISTENERS  
   observeEvent(input$loadDataset,{
     updateTextInput(session,"actionSelected",value= "loadDataset")
-    observe({
-      updateSelectInput(session,"oilPrices",
-                        choices = c("EIA OIL" = "eiaoilp",
-                                    "Brent OIL" = "boilp",
-                                    "W OIL" = "woilp"))
-    })
+    # observe({
+    #   updateSelectInput(session,"oilPrices",
+    #                     choices = c("EIA OIL" = "eiaoilp",
+    #                                 "Brent OIL" = "boilp",
+    #                                 "W OIL" = "woilp"))
+    # })
+    plotter<-m_eiaoilp
+          # Increment the top-level progress indicator
+        # incProgress(1)     
   })
   
   observeEvent(input$uploadDataset,{
@@ -91,35 +96,42 @@ shinyServer(function(input, output,session) {
         })
         observe({
           new_options <- colnames(plotter)
-          new_options <- new_options[2:length(new_options)]
+          new_options <- new_options[2]
           updateCheckboxGroupInput(session,"variableToForcast",
                                    choices=new_options)
         })
     }else{
+    #   datasetInput <- reactive({
+    #     switch(input$oilPrices,
+    #            "daily" = d_eiaoilp,
+    #            "weekly" = w_eiaoilp,
+    #            "monthly" = m_eiaoilp
+    #     )
+    #   })
       datasetInput <- reactive({
-        switch(input$oilPrices,
-               "eiaoilp" = eiaoilp,
-               "boilp" = boilp,
-               "woilp" = woilp
-        )
+         switch(input$oilPrices,
+               "Daily" = d_eiaoilp_rev,
+               "Weekly" = w_eiaoilp_rev,
+               "Monthly" = m_eiaoilp_rev
+        ) 
       })
       plotter<-datasetInput()
-      output$table_output <- renderTable({
-        plotter$date <- format(plotter$date,'%Y-%m-%d')
+            # plotter<-m_eiaoilp
+      slider_component <- eia_years      
+            # Increment the top-level progress indicator
+            # incProgress(1)
+            # setProgress(1)     
+        
+      output$table_output <- renderDataTable({
+        # plotter$date <- format(plotter$date,'%Y-%m-%d')
+        # plotter <- datasetInput()
         plotter
-      })  
-      # this is important for the slider in the visualization tab.
-      yearSelection <- reactive({
-            switch(input$oilPrices,
-            "eiaoilp" = eia_years,
-            "boilp" = bo_years,
-            "woilp" = wo_years)
-        })
-      slider_component <- yearSelection()
+      }) 
+   
       observe({
         #plotter<-datasetInput()
         new_options <- colnames(plotter)
-        new_options <- new_options[1:length(new_options)-1]
+        new_options <- new_options[2]
         updateCheckboxGroupInput(session,"variableToForcast",
                                  choices=new_options,selected = new_options[1])
         updateSliderInput(session,"yearSlider",min=min(slider_component),max=max(slider_component),
@@ -138,23 +150,26 @@ shinyServer(function(input, output,session) {
       plotter <-read.csv(inFile$datapath, header=input$header, sep=input$sep, 
                          quote=input$quote)
     }else{
-      datasetInput <- reactive({
-        # This is where you would put the dataset options that you want to download
+     datasetInput <- reactive({
         switch(input$oilPrices,
-               "eiaoilp" = eiaoilp,
-               "boilp" = boilp,
-               "woilp" = woilp
+               "Daily" = d_eiaoilp,
+               "Weekly" = w_eiaoilp,
+               "Monthly" = m_eiaoilp
         )
-      })
-     plotter <- datasetInput() 
+      }) 
+     plotter <-datasetInput() 
      cat(input$yearSlider[1])
     }
     output$plot_output <- renderPlot({
       # generate bins based on input$bins from ui.R
       # reduces the date to the specified slider
-    #   cat(input$yearSlider)
-      plotter <- plotter[which(plotter$date >= as.Date(as.character(input$yearSlider[1]),"%Y") & 
-                                plotter$date <= as.Date(as.character(input$yearSlider[2]),"%Y")),]
+      cat(input$yearSlider)
+    #   plotter <- plotter[which(plotter$date >= as.Date(as.character(input$yearSlider[1]),"%Y") & 
+    #                             plotter$date <= as.Date(as.character(input$yearSlider[2]),"%Y")),]
+      plotter <- plotter[which(
+          as.numeric(format(as.yearmon(plotter$date),"%Y")) >= input$yearSlider[1] & 
+          as.numeric(format(as.yearmon(plotter$date),"%Y")) <= input$yearSlider[2]),]
+      plotter$DATE<-as.Date(as.character(plotter$date),format="%Y-%m-%d")
       new_graph <- plotGraph(plotter,input$variableToForcast,model_type = input$modelSelection,
                              start_year = input$yearSlider[1])
       #theGraph <- ggplot(plotter,aes_string(x=plotter$date,y=input$variableToForcast

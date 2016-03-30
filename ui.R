@@ -26,8 +26,8 @@ shinyUI(fluidPage(theme = "app.css", #css file to further style the page
                         tags$hr(),
                         # default select input before the server loads the dataset
                         selectInput("oilPrices","Choose a dataset:", 
-                                    choices = c("WTI","Brent"))
-                        #actionButton("displayAction","Display Dataset as Table",class="displayAction btn-primary center-block")
+                                    choices = c("Daily","Weekly","Monthly"))
+                        # actionButton("displayAction","Display Dataset as Table",class="displayAction btn-primary center-block")
                         ),
                 tags$div(id="u_dataset",class="hidden",
                         tags$hr(),
@@ -51,7 +51,8 @@ shinyUI(fluidPage(theme = "app.css", #css file to further style the page
                     selectInput("modelSelection","Select a model",
                                 choices=c("None" = "none",
                                     "Linear Model"="linear_model",
-                                           "Time Series (Holt Winters)"="holt_winters")),
+                                           "Time Series (Holt Winters)"="holt_winters",
+                                           "Time Series (Arima)"="arima")),
                     checkboxGroupInput("variableToForcast","Select Variable to Forcast",
                                         choices = c("Price"="price",
                                                     "Dist" = "Dist")),
@@ -61,15 +62,20 @@ shinyUI(fluidPage(theme = "app.css", #css file to further style the page
     tags$div(id="visual_sidebar",class="hidden",
         sliderInput("yearSlider", "Years:",
                   min = 0, max = 10000, value = c(200,500), step = 10,
-                   sep = "", animate=TRUE)
+                   sep = "", animate=TRUE),
+        selectInput("yearInput","Select a year",
+            choices=c('')),
+        selectInput("monthInput","Select a Month",
+            choices=c(""))
         )
+        
     ),   
     # Show a plot of the generated distribution
     mainPanel(
       tabsetPanel("tabsets",
                   tabPanel("table",
                            tags$p(),
-                           tableOutput("table_output"),
+                           dataTableOutput("table_output"),
                            h2("This is the first panel.")),
                   tabPanel("visualization",
                            plotOutput('plot_output'),
