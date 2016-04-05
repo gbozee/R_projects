@@ -22,12 +22,19 @@ shinyUI(fluidPage(theme = "app.css", #css file to further style the page
             actionButton("loadDataset",class="btn btn-block btn-default", "Load Available Dataset"),
             actionButton("uploadDataset",class="btn btn-block btn-default","Upload Dataset"),        
             tags$div(class="set_container hidden",
+                   
                 tags$div(id="l_dataset",class="hidden",
                         tags$hr(),
+                        selectInput("oilPricesSource","Select a data source",
+                            choices= c("")),
                         # default select input before the server loads the dataset
                         selectInput("oilPrices","Choose a dataset:", 
-                                    choices = c("Daily","Weekly","Monthly"))
+                                    choices = c("Select","Daily","Weekly","Monthly")),
                         # actionButton("displayAction","Display Dataset as Table",class="displayAction btn-primary center-block")
+                        dateRangeInput("daterange", "Date range:",
+                            start = "2001-01-01",
+                            end   = "2010-12-31")
+                        # actionButton('')
                         ),
                 tags$div(id="u_dataset",class="hidden",
                         tags$hr(),
@@ -53,9 +60,9 @@ shinyUI(fluidPage(theme = "app.css", #css file to further style the page
                                     "Linear Model"="linear_model",
                                            "Time Series (Holt Winters)"="holt_winters",
                                            "Time Series (Arima)"="arima")),
-                    checkboxGroupInput("variableToForcast","Select Variable to Forcast",
-                                        choices = c("Price"="price",
-                                                    "Dist" = "Dist")),
+                    selectInput("no_of_observations","Select Number of Observations to forecast",
+                                        choices = c(1,3,6,9)
+                        ),
                     actionButton("visualizeAction","Visualize Dataset",class="btn-info center-block")
                     )
                 ),
@@ -75,6 +82,7 @@ shinyUI(fluidPage(theme = "app.css", #css file to further style the page
       tabsetPanel("tabsets",
                   tabPanel("table",
                            tags$p(),
+                           h3(id="table_text"),
                            dataTableOutput("table_output"),
                            h2("This is the first panel.")),
                   tabPanel("visualization",

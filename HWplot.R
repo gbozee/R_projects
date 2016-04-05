@@ -2,7 +2,7 @@ library(ggplot2)
 
 library(reshape)
 library(forecast)
-
+library(scales)
 
 funggcast<-function(dn,data_point=12,f_type="holt_winters",is.date = NULL, ts.connect = TRUE,
                               predict.geom = 'line',
@@ -54,18 +54,30 @@ funggcast<-function(dn,data_point=12,f_type="holt_winters",is.date = NULL, ts.co
     return(ds)
  
 }
-ArimaPlot<-function(ts_object,  n.ahead=4,  CI=.95,  error.ribbon='green', line.size=1){
+s_var <- function(date_type){    
+  if (date_type=="Monthly"){
+      scale_var <- scale_x_date(breaks = "1 year", minor_breaks = "1 month", labels=date_format("%B"))
+  }else if(date_type == "Weekly"){
+      scale_var <- scale_x_date(breaks = "1 week",minor_breaks = "1 day", labels = date_format("%W"))
+  }else{
+      scale_var <- scale_x_date(limits = c(Sys.Date() - 7, NA))
+  }
+  return(scale_var)
+}
+ArimaPlot<-function(ts_object,  n.ahead=4,  CI=.95,  error.ribbon='green', line.size=1,date_type="Monthly"){
     graphset <- funggcast(ts_object,data_point=n.ahead,f_type="arima")
+    scale_var <- s_var(date_type)
   p <- ggplot(graphset,aes(date,observed)) + 
        geom_line(color="red") + 
        geom_line(aes(y=fitted)) + 
        geom_line(color="blue") + 
        geom_line(aes(y = forecast)) + 
        geom_ribbon(aes(ymin = lo95, ymax = hi95), alpha = .25) +
-       ylab("Oil Prices Values") + xlab("Years")
+       ylab("Oil Prices Values") + xlab("Years") +
+       scale_var
        return(p)
 }
-HWplot<-function(ts_object,  n.ahead=4,  CI=.95,  error.ribbon='green', line.size=1){
+HWplot<-function(ts_object,  n.ahead=4,  CI=.95,  error.ribbon='green', line.size=1,date_type="Monthly"){
   
 #   hw_object<-HoltWinters(ts_object)
   
@@ -89,13 +101,15 @@ HWplot<-function(ts_object,  n.ahead=4,  CI=.95,  error.ribbon='green', line.siz
 #   View(graphset)
   
   graphset <- funggcast(ts_object,n.ahead)
+    scale_var <- s_var(date_type)
   p <- ggplot(graphset,aes(date,observed)) + 
        geom_line(color="red") + 
        geom_line(aes(y=fitted)) + 
        geom_line(color="blue") + 
        geom_line(aes(y = forecast)) + 
        geom_ribbon(aes(ymin = lo95, ymax = hi95), alpha = .25) +
-       ylab("Oil Prices Values") + xlab("Years")
+       ylab("Oil Prices Values") + xlab("Years") +
+       scale_var
 #   p<-ggplot(graphset.melt,  aes(x=time,  y=value)) + 
 #     geom_ribbon(data=graphset, aes(x=time, y=Fitted, ymin=Fitted-dev,  ymax=Fitted + dev),  alpha=.2,  fill=error.ribbon) + 
 #     geom_line(aes(colour=variable), size=line.size) + 
@@ -121,3 +135,29 @@ HWplot<-function(ts_object,  n.ahead=4,  CI=.95,  error.ribbon='green', line.siz
 #   colnames(plot.data) <- sub(' ', '_', colnames(plot.data))
 #   plot.data
 # }
+funggcast2<-function(dn,fcast){ 
+	require(zoo) #needed for the 'as.yearmon()' function
+ 
+	en<-max(time(fcast$mean)) #extract the max date used in the forecast
+ 
+	#Extract Source and Training Data
+	ds<-as.data.frame(window(dn,end=en))
+	names(ds)<-'observed'
+	ds$date<-as.Date(time(window(dn,end=en)))
+ 
+	#Extract the Fitted Values (need to figure out how to grab confidence intervals)
+	dfit<-as.data.frame(fcast$fitted)
+	dfit$date<-as.Date(time(fcast$fitted))
+	names(dfit)[1]<-'fitted'
+ 
+	ds<-merge(ds,dfit,all.x=T) #Merge fitted values with source and training data
+ 
+	#Exract the Forecast values and confidence intervals
+	dfcastn<-as.data.frame(fcast)
+	dfcastn$date<-as.Date(as.yearmon(row.names(dfcastn)))
+	names(dfcastn)<-c('forecast','lo80','hi80','lo95','hi95','date')
+ 
+	pd<-merge(ds,dfcastn,all.x=T) #final data.frame for use in ggplot
+	return(pd)
+ 
+}
