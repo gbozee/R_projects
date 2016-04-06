@@ -51,23 +51,17 @@ plotGraph <- function(plotter,variableToForcast,model_type='',start_year=1980,
 require(EIAdata)
 
 # Fetch datasets
-d_eiaoilp<-read.table("./daily.csv",header=TRUE,sep=",")[,c("date","price")]
-w_eiaoilp<-read.table("./weekly.csv",header=TRUE,sep=",")[,c("date","price")]
-m_eiaoilp<-read.table("./monthly.csv",header=TRUE,sep=",")[,c("date","price")]
+d_eiaoilp<-read.table("./eia_daily.csv",header=TRUE,sep=",")[,c("date","price")]
+w_eiaoilp<-read.table("./eia_weekly.csv",header=TRUE,sep=",")[,c("date","price")]
+m_eiaoilp<-read.table("./eia_monthly.csv",header=TRUE,sep=",")[,c("date","price")]
 #Todo change to actual data
-d_boilp<-read.table("./daily.csv",header=TRUE,sep=",")[,c("date","price")]
-w_boilp<-read.table("./weekly.csv",header=TRUE,sep=",")[,c("date","price")]
-m_boilp<-read.table("./monthly.csv",header=TRUE,sep=",")[,c("date","price")]
-d_woilp<-read.table("./daily.csv",header=TRUE,sep=",")[,c("date","price")]
-w_woilp<-read.table("./weekly.csv",header=TRUE,sep=",")[,c("date","price")]
-m_woilp<-read.table("./monthly.csv",header=TRUE,sep=",")[,c("date","price")]
+d_boilp<-read.table("./brent_daily.csv",header=TRUE,sep=",")[,c("date","price")]
+w_boilp<-read.table("./brent_weekly.csv",header=TRUE,sep=",")[,c("date","price")]
+m_boilp<-read.table("./brent_monthly.csv",header=TRUE,sep=",")[,c("date","price")]
+d_woilp<-read.table("./wt_daily.csv",header=TRUE,sep=",")[,c("date","price")]
+w_woilp<-read.table("./wt_weekly.csv",header=TRUE,sep=",")[,c("date","price")]
+m_woilp<-read.table("./wt_monthly.csv",header=TRUE,sep=",")[,c("date","price")]
 
-# order of table. order date in decreasing order
-d_eiaoilp_rev <- d_eiaoilp[order(d_eiaoilp$date,decreasing = TRUE),]
-w_eiaoilp_rev <- w_eiaoilp[order(w_eiaoilp$date,decreasing = TRUE),]
-m_eiaoilp_rev <- m_eiaoilp[order(m_eiaoilp$date,decreasing = TRUE),]
-# boilp <- boilp[order(boilp$date,decreasing = TRUE),]
-# woilp <- woilp[order(woilp$date,decreasing = TRUE),]
 
 # get the years only with no duplicate
 # unique function removes duplicates
@@ -80,14 +74,14 @@ eia_years <- unique(as.numeric(format(as.yearmon(m_eiaoilp$date),"%Y")))
 dataSetWithDuration <- function(sourceVal,daterange="Monthly"){
   if(daterange=='Daily'){       
     val <- switch(sourceVal,
-        "eiaoilp"=d_eiaoilp,"boilp"=d_biolp,"woilp"=d_woilp)
+        "eiaoilp"=d_eiaoilp,"boilp"=d_boilp,"woilp"=d_woilp)
         
     }else if(daterange=='Weekly'){              
     val <- switch(sourceVal,
-        "eiaoilp"=w_eiaoilp,"boilp"=w_biolp,"woilp"=w_woilp)
+        "eiaoilp"=w_eiaoilp,"boilp"=w_boilp,"woilp"=w_woilp)
     }else if(daterange=='Monthly'){              
     val <- switch(sourceVal,
-        "eiaoilp"=m_eiaoilp,"boilp"=m_biolp,"woilp"=m_woilp)
+        "eiaoilp"=m_eiaoilp,"boilp"=m_boilp,"woilp"=m_woilp)
     }else{
         val <- NULL
     }
@@ -124,12 +118,13 @@ shinyServer(function(input, output,session) {
     if(is.null(val)){
           return(NULL)
     }       
-    
-    start_date = min(as.Date(val$date))
-    end_date = max(as.Date(val$date))
-    updateDateRangeInput(session, 'daterange', 
-        start = start_date, end = end_date)   
-    
+    observe({      
+        start_date = min(as.Date(val$date))
+        end_date = max(as.Date(val$date))
+        updateDateRangeInput(session, 'daterange', 
+            start = start_date, end = end_date)   
+      
+    })
   })
   observeEvent(input$daterange,{
       cat(input$daterange[1])
@@ -206,7 +201,7 @@ shinyServer(function(input, output,session) {
     output$plot_output <- renderPlot({
       # generate bins based on input$bins from ui.R
       # reduces the date to the specified slider
-      cat(input$yearSlider)
+    #   cat(input$yearSlider)
     #   plotter <- plotter[which(plotter$date >= as.Date(as.character(input$yearSlider[1]),"%Y") & 
     #                             plotter$date <= as.Date(as.character(input$yearSlider[2]),"%Y")),]
     #   plotter <- plotter[which(
