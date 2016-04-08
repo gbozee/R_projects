@@ -16,7 +16,12 @@ $(document).ready(function(){
     $('#model_section').removeClass("hidden").addClass("hidden");
   });
   $(".displayAction").click(function(e){
-    $('#model_section').removeClass("hidden");
+      if($('#oilPrices').val() !== "Select" && $('#actionSelected').val() == 'loadDataset'){
+        $('#model_section').removeClass("hidden");   
+      }
+      if($('#actionSelected').val() == 'uploadDataset'){
+          $('#model_section').removeClass("hidden");
+      }
   })
   // code when the visualize button is clicked
   $("#visualizeAction").click(function(e){
@@ -31,4 +36,13 @@ $(document).ready(function(){
         $('#visual_sidebar').toggleClass("hidden")
       
   })
+  //When oilPrice is Empty
+// //   $('.displayAction').addClass('hidden');
+//   $('#oilPricesSource').change(function(){
+//       if($(this).val() === 'Select'){
+//           $('#displayAction').removeClass('hidden').addClass('hidden')
+//       }else{
+//           $('#displayAction').removeClass('hidden').removeClass('hidden')
+//       }
+//   })
 });

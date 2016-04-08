@@ -9,6 +9,8 @@ library(shiny)
 library(Quandl)
 library(ggfortify)
 library(ggplot2)
+library(reshape2)
+# library(DT)
 # import this file which plots graph for predicted values
 source("./HWplot.R")
 source("./fetch_dataset.R")
@@ -18,6 +20,12 @@ first_element_as_a_list <- function(plotter,index=1){
     month_data <- as.numeric(format(as.Date(as.character(plotter[index,]$date),format="%Y-%m-%d"),"%m"))
     return(c(year_data,month_data))
 }
+date_from_slider <- function(vect){
+        first <- as.Date(as.character(vect[1]),"%Y")
+        second <- as.Date(as.character(vect[2]),"%Y")
+        return(c(first,second))
+    }
+    
 get_time_series_object <- function(plotter,observations,date_type="Monthly"){
     frequency <- switch(date_type,
         "Monthly"=12,"Weekly"=52,"Quarterly"=4)
@@ -29,29 +37,28 @@ get_time_series_object <- function(plotter,observations,date_type="Monthly"){
 }
 plotGraph <- function(plotter,variableToForcast,model_type='',start_year=1980,
     observations=1,date_type="Monthly"){        
-    ts_data <- get_time_series_object(plotter,observations,date_type)
     
-  theGraph <- ggplot(plotter,aes_string(x=plotter$DATE,y=variableToForcast
+  new_graph <- ggplot(plotter,aes_string(x=plotter$DATE,y=variableToForcast
 #   theGraph <- ggplot(plotter,aes(x=plotter$DATE,y=variableToForcast
   )) +
     ylab("Oil Prices Values") + xlab("Years") +geom_line(colour="blue")
   if(model_type == "linear_model"){
     f <- paste(names(plotter)[2], "~", paste(names(plotter)[3]))
     plotter$predicted <- predict(lm(f,data=plotter))    
-    new_graph <- theGraph + 
+    new_graph <- new_graph + 
         geom_line(aes(y=plotter$predicted))
   }
   if(model_type == 'holt_winters'){
     # function that predicts future values and returns a plot object
     # spent the whole night writing this function
+    ts_data <- get_time_series_object(plotter,observations,date_type)    
     new_graph <- HWplot(ts_data,n.ahead=observations,date_type=date_type) 
   }
   if(model_type == "arima"){      
+      ts_data <- get_time_series_object(plotter,observations,date_type)
+    
       new_graph <- ArimaPlot(ts_data,n.ahead=observations,date_type=date_type)
   }
-  if(model_type == ''){        
-    new_graph <- theGraph 
-  }      
   return(new_graph)
 }
 convert_to_quarterly_dataframe <- function(original_dataframe){
@@ -84,7 +91,10 @@ eia_years <- unique(as.numeric(format(as.yearmon(m_eiaoilp$date),"%Y")))
 # eia_years <- unique(as.numeric(format(as.Date(as.yearmon(time(m_eiaoilp$date))),"%Y")))
 # bo_years <- unique(as.numeric(format(boilp$date,"%Y")))
 # wo_years <- unique(as.numeric(format(woilp$date,"%Y")))
-
+get_years_from_d_frame <- function(d_frame){
+    eia_years <- unique(as.numeric(format(as.yearmon(d_frame),"%Y")))
+    return(eia_years)    
+}
 
 dataSetWithDuration <- function(sourceVal,daterange="Monthly"){
   if(daterange=='Weekly'){              
@@ -165,7 +175,9 @@ shinyServer(function(input, output,session) {
                                    choices=new_options)
         })
     }else{
-   
+      if(is.null(input$oilPrices) || input$oilPrices == 'Select')
+            return(NULL)
+            
       plotter<- dataSetWithDuration(input$oilPricesSource,input$oilPrices)
       plotter <-retrieveDatasetInRange(plotter,input$daterange)
       if(input$oilPrices == 'Quarterly'){
@@ -174,7 +186,7 @@ shinyServer(function(input, output,session) {
       
       rev_plotter <- plotter[order(plotter$date,decreasing = TRUE),]
 
-      slider_component <- eia_years      
+      slider_component <- get_years_from_d_frame(plotter$date)      
             # Increment the top-level progress indicator
             # incProgress(1)
             # setProgress(1)     
@@ -205,7 +217,8 @@ shinyServer(function(input, output,session) {
       plotter <-read.csv(inFile$datapath, header=input$header, sep=input$sep, 
                          quote=input$quote)
     }else{
-     plotter<- dataSetWithDuration(input$oilPricesSource,input$oilPrices)
+        plotter<- dataSetWithDuration(input$oilPricesSource,input$oilPrices)
+        
      cat(input$yearSlider[1])
     }
     output$plot_output <- renderPlot({
@@ -217,7 +230,9 @@ shinyServer(function(input, output,session) {
     #   plotter <- plotter[which(
     #       as.numeric(format(as.yearmon(plotter$date),"%Y")) >= input$yearSlider[1] & 
     #       as.numeric(format(as.yearmon(plotter$date),"%Y")) <= input$yearSlider[2]),]
+      d_slider <- date_from_slider(input$yearSlider)
       plotter <-retrieveDatasetInRange(plotter,input$daterange)
+      plotter <- retrieveDatasetInRange(plotter,d_slider)
       plotter$DATE<-as.Date(as.character(plotter$date),format="%Y-%m-%d")
       new_graph <- plotGraph(plotter,"price",model_type = input$modelSelection,
                              start_year = input$yearSlider[1],
@@ -225,12 +240,17 @@ shinyServer(function(input, output,session) {
                              date_type=input$oilPrices)
       new_graph
     })
-    output$predicted_table <- renderDataTable({
+    output$predicted_table <- DT::renderDataTable({
+        d_slider <- date_from_slider(input$yearSlider)
         plotter <-retrieveDatasetInRange(plotter,input$daterange)
+        plotter <- retrieveDatasetInRange(plotter,d_slider)      
         plotter$DATE<-as.Date(as.character(plotter$date),format="%Y-%m-%d")
       
         ts_data <- get_time_series_object(plotter,input$no_of_observations,input$oilPrices)
         predicted <- funggcast(ts_data,input$no_of_observations,input$modelSelection)
+        predicted <- as.data.frame(t(predicted))
+        predicted<- head(predicted,4)
+        DT::datatable(predicted, options = list(searching = FALSE,paging = FALSE))
     })
   })
 

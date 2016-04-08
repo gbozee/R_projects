@@ -8,15 +8,32 @@
 library(shiny)
 #library(shinyjs)
 
+mycss <- "
+#plot-container {
+  position: relative;
+}
+#loading-spinner {
+  position: absolute;
+  left: 50%;
+  top: 80%;
+  z-index: -1;
+  margin-top: -33px;  /* half of the spinner's height */
+  margin-left: -33px; /* half of the spinner's width */
+}
+#plot.recalculating {
+  z-index: -2;
+"
+
+
 shinyUI(fluidPage(theme = "app.css", #css file to further style the page
-  #useShinyjs(),
   includeScript("page_load.js"),
+  
   # Application title
   titlePanel("Oil Estimator"),
-
   # Sidebar with a slider input for number of bins
   sidebarLayout(
     sidebarPanel(
+        tags$head(tags$style(HTML(mycss))),
         tags$div(id="table_sidebar",
             textInput("actionSelected",label = ''),
             actionButton("loadDataset",class="btn btn-block btn-default", "Load Available Dataset"),
@@ -66,11 +83,12 @@ shinyUI(fluidPage(theme = "app.css", #css file to further style the page
                     actionButton("visualizeAction","Visualize Dataset",class="btn-info center-block")
                     )
                 ),
-    tags$div(id="visual_sidebar",class="hidden",
-        sliderInput("yearSlider", "Years:",
-                  min = 0, max = 10000, value = c(200,500), step = 10,
-                   sep = "", animate=TRUE),
-        
+            tags$div(id="visual_sidebar",class="hidden",
+                sliderInput("yearSlider", "Years:",
+                        min = 0, max = 10000, value = c(200,500), step = 10,
+                        sep = "", animate=TRUE)
+            )
+                
     ),   
     # Show a plot of the generated distribution
     mainPanel(
@@ -81,10 +99,16 @@ shinyUI(fluidPage(theme = "app.css", #css file to further style the page
                            dataTableOutput("table_output"),
                            h2("This is the first panel.")),
                   tabPanel("visualization",
-                           plotOutput('plot_output'),
-                           h2("This is the second panel."),
-                           dataTableOutput("predicted_table"))
-                  )
+                    conditionalPanel(condition="$('html').hasClass('shiny-busy')",
+                            # tags$div("Loading...",id="loadmessage")),
+                            tags$img(src = "35.gif", id = "loading-spinner")),
+                    conditionalPanel(condition="!$('html').hasClass('shiny-busy')",
+                            tags$div(                             
+                                plotOutput('plot_output'),
+                                h2("This is the second panel."),
+                                div(style = 'overflow-x: scroll', dataTableOutput("predicted_table"))   
+                            ) )
+      ))
                 #   tabPanel("predicted_data",
                 #             tableOutput("predicted_output")
                 #     )
