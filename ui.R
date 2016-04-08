@@ -29,7 +29,7 @@ shinyUI(fluidPage(theme = "app.css", #css file to further style the page
                             choices= c("")),
                         # default select input before the server loads the dataset
                         selectInput("oilPrices","Choose a dataset:", 
-                                    choices = c("Select","Daily","Weekly","Monthly")),
+                                    choices = c("Select","Weekly","Monthly","Quarterly")),
                         # actionButton("displayAction","Display Dataset as Table",class="displayAction btn-primary center-block")
                         dateRangeInput("daterange", "Date range:",
                             start = "2001-01-01",
@@ -70,11 +70,6 @@ shinyUI(fluidPage(theme = "app.css", #css file to further style the page
         sliderInput("yearSlider", "Years:",
                   min = 0, max = 10000, value = c(200,500), step = 10,
                    sep = "", animate=TRUE),
-        selectInput("yearInput","Select a year",
-            choices=c('')),
-        selectInput("monthInput","Select a Month",
-            choices=c(""))
-        )
         
     ),   
     # Show a plot of the generated distribution
@@ -88,8 +83,11 @@ shinyUI(fluidPage(theme = "app.css", #css file to further style the page
                   tabPanel("visualization",
                            plotOutput('plot_output'),
                            h2("This is the second panel."),
-                           tableOutput("predicted_table"))
+                           dataTableOutput("predicted_table"))
                   )
+                #   tabPanel("predicted_data",
+                #             tableOutput("predicted_output")
+                #     )
     )
   )
 ))

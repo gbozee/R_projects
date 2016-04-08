@@ -12,17 +12,25 @@ library(ggplot2)
 # import this file which plots graph for predicted values
 source("./HWplot.R")
 source("./fetch_dataset.R")
-
-plotGraph <- function(plotter,variableToForcast,model_type='',start_year=1980,
-    observations=1,date_type="Monthly"){
-        
+first_element_as_a_list <- function(plotter,index=1){
+   
+    year_data <- as.numeric(format(as.Date(as.character(plotter[index,]$date),format="%Y-%m-%d"),"%Y"))
+    month_data <- as.numeric(format(as.Date(as.character(plotter[index,]$date),format="%Y-%m-%d"),"%m"))
+    return(c(year_data,month_data))
+}
+get_time_series_object <- function(plotter,observations,date_type="Monthly"){
     frequency <- switch(date_type,
-        "Monthly"=12,"Weekly"=52,"Daily"=365)
+        "Monthly"=12,"Weekly"=52,"Quarterly"=4)
     # get first and last data 
-    year_data <- as.numeric(format(as.Date(as.character(plotter[1,]$date),format="%Y-%m-%d"),"%Y"))
-    month_data <- as.numeric(format(as.Date(as.character(plotter[1,]$date),format="%Y-%m-%d"),"%m"))
+    start <- first_element_as_a_list(plotter)
+    end <- first_element_as_a_list(plotter,length(plotter$date))
+    ts_data <- ts(plotter$price,frequency=frequency,start=start,end=end)
+    return(ts_data)
+}
+plotGraph <- function(plotter,variableToForcast,model_type='',start_year=1980,
+    observations=1,date_type="Monthly"){        
+    ts_data <- get_time_series_object(plotter,observations,date_type)
     
-    ts_data <- ts(plotter$price,frequency=frequency,start=c(year_data,month_data))
   theGraph <- ggplot(plotter,aes_string(x=plotter$DATE,y=variableToForcast
 #   theGraph <- ggplot(plotter,aes(x=plotter$DATE,y=variableToForcast
   )) +
@@ -34,12 +42,11 @@ plotGraph <- function(plotter,variableToForcast,model_type='',start_year=1980,
         geom_line(aes(y=plotter$predicted))
   }
   if(model_type == 'holt_winters'){
-    
     # function that predicts future values and returns a plot object
     # spent the whole night writing this function
     new_graph <- HWplot(ts_data,n.ahead=observations,date_type=date_type) 
   }
-  if(model_type == "arima"){
+  if(model_type == "arima"){      
       new_graph <- ArimaPlot(ts_data,n.ahead=observations,date_type=date_type)
   }
   if(model_type == ''){        
@@ -47,22 +54,30 @@ plotGraph <- function(plotter,variableToForcast,model_type='',start_year=1980,
   }      
   return(new_graph)
 }
-
+convert_to_quarterly_dataframe <- function(original_dataframe){
+    s_date  <- first_element_as_a_list(original_dataframe)
+    e_q_eilolpts <- ts(original_dataframe,frequency=4,start=s_date)
+    q_eiolp <- data.frame(date=as.Date(as.yearmon(time(e_q_eilolpts))),
+        price=as.matrix(e_q_eilolpts))
+    return(q_eiolp)
+    
+}
 require(EIAdata)
 
 # Fetch datasets
-d_eiaoilp<-read.table("./eia_daily.csv",header=TRUE,sep=",")[,c("date","price")]
+# d_eiaoilp<-read.table("./eia_daily.csv",header=TRUE,sep=",")[,c("date","price")]
 w_eiaoilp<-read.table("./eia_weekly.csv",header=TRUE,sep=",")[,c("date","price")]
 m_eiaoilp<-read.table("./eia_monthly.csv",header=TRUE,sep=",")[,c("date","price")]
+q_eiaoilp <- convert_to_quarterly_dataframe(m_eiaoilp)
 #Todo change to actual data
-d_boilp<-read.table("./brent_daily.csv",header=TRUE,sep=",")[,c("date","price")]
+# d_boilp<-read.table("./brent_daily.csv",header=TRUE,sep=",")[,c("date","price")]
 w_boilp<-read.table("./brent_weekly.csv",header=TRUE,sep=",")[,c("date","price")]
 m_boilp<-read.table("./brent_monthly.csv",header=TRUE,sep=",")[,c("date","price")]
-d_woilp<-read.table("./wt_daily.csv",header=TRUE,sep=",")[,c("date","price")]
+q_boilp <- convert_to_quarterly_dataframe(m_boilp)
+# d_woilp<-read.table("./wt_daily.csv",header=TRUE,sep=",")[,c("date","price")]
 w_woilp<-read.table("./wt_weekly.csv",header=TRUE,sep=",")[,c("date","price")]
 m_woilp<-read.table("./wt_monthly.csv",header=TRUE,sep=",")[,c("date","price")]
-
-
+q_woilp <- convert_to_quarterly_dataframe(m_woilp)
 # get the years only with no duplicate
 # unique function removes duplicates
 eia_years <- unique(as.numeric(format(as.yearmon(m_eiaoilp$date),"%Y")))
@@ -72,17 +87,16 @@ eia_years <- unique(as.numeric(format(as.yearmon(m_eiaoilp$date),"%Y")))
 
 
 dataSetWithDuration <- function(sourceVal,daterange="Monthly"){
-  if(daterange=='Daily'){       
+  if(daterange=='Weekly'){              
     val <- switch(sourceVal,
-        "eiaoilp"=d_eiaoilp,"boilp"=d_boilp,"woilp"=d_woilp)
-        
-    }else if(daterange=='Weekly'){              
-    val <- switch(sourceVal,
-        "eiaoilp"=w_eiaoilp,"boilp"=w_boilp,"woilp"=w_woilp)
+        "eiaoilp"=w_eiaoilp,"boilp"=w_boilp,"woilp"=w_woilp)    
     }else if(daterange=='Monthly'){              
-    val <- switch(sourceVal,
-        "eiaoilp"=m_eiaoilp,"boilp"=m_boilp,"woilp"=m_woilp)
-    }else{
+        val <- switch(sourceVal,
+            "eiaoilp"=m_eiaoilp,"boilp"=m_boilp,"woilp"=m_woilp)
+    }else if(daterange == 'Quarterly'){
+        val <- switch(sourceVal,
+            "eiaoilp"=m_eiaoilp,"boilp"=m_boilp,"woilp"=m_woilp)        
+     }else{
         val <- NULL
     }
     return(val)
@@ -152,16 +166,12 @@ shinyServer(function(input, output,session) {
         })
     }else{
    
-      datasetInput <- reactive({
-         switch(input$oilPrices,
-               "Daily" = d_eiaoilp_rev,
-               "Weekly" = w_eiaoilp_rev,
-               "Monthly" = m_eiaoilp_rev
-        ) 
-      })
       plotter<- dataSetWithDuration(input$oilPricesSource,input$oilPrices)
-      View(plotter)
       plotter <-retrieveDatasetInRange(plotter,input$daterange)
+      if(input$oilPrices == 'Quarterly'){
+          plotter <- convert_to_quarterly_dataframe(plotter)
+      }
+      
       rev_plotter <- plotter[order(plotter$date,decreasing = TRUE),]
 
       slider_component <- eia_years      
@@ -214,6 +224,13 @@ shinyServer(function(input, output,session) {
                              observations = input$no_of_observations,
                              date_type=input$oilPrices)
       new_graph
+    })
+    output$predicted_table <- renderDataTable({
+        plotter <-retrieveDatasetInRange(plotter,input$daterange)
+        plotter$DATE<-as.Date(as.character(plotter$date),format="%Y-%m-%d")
+      
+        ts_data <- get_time_series_object(plotter,input$no_of_observations,input$oilPrices)
+        predicted <- funggcast(ts_data,input$no_of_observations,input$modelSelection)
     })
   })
 
