@@ -201,7 +201,7 @@ shinyServer(function(input, output,session) {
         #plotter<-datasetInput()
         new_options <- colnames(plotter)
         new_options <- new_options[2]
-        updateSliderInput(session,"yearSlider",min=min(slider_component),max=max(slider_component),
+        updateSliderInput(session,"yearSlider",min=min(slider_component),max=2016,
                         step=1,value = c(min(slider_component),max(slider_component)))
       })
     }
@@ -240,17 +240,19 @@ shinyServer(function(input, output,session) {
                              date_type=input$oilPrices)
       new_graph
     })
-    output$predicted_table <- DT::renderDataTable({
+    # output$predicted_table <- DT::renderDataTable({
+    output$predicted_table <- renderDataTable({
         d_slider <- date_from_slider(input$yearSlider)
         plotter <-retrieveDatasetInRange(plotter,input$daterange)
         plotter <- retrieveDatasetInRange(plotter,d_slider)      
         plotter$DATE<-as.Date(as.character(plotter$date),format="%Y-%m-%d")
-      
         ts_data <- get_time_series_object(plotter,input$no_of_observations,input$oilPrices)
         predicted <- funggcast(ts_data,input$no_of_observations,input$modelSelection)
         predicted <- as.data.frame(t(predicted))
-        predicted<- head(predicted,4)
-        DT::datatable(predicted, options = list(searching = FALSE,paging = FALSE))
+        predicted<- head(predicted,4)        
+        # View(predicted)
+        predicted
+        # DT::datatable(predicted, options = list(searching = FALSE,paging = FALSE))
     })
   })
 
