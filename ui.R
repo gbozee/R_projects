@@ -7,6 +7,7 @@
 
 library(shiny)
 #library(shinyjs)
+library(DT)
 
 mycss <- "
 #plot-container {
@@ -46,11 +47,26 @@ shinyUI(fluidPage(theme = "app.css", #css file to further style the page
                             choices= c("")),
                         # default select input before the server loads the dataset
                         selectInput("oilPrices","Choose a dataset:", 
-                                    choices = c("Select","Weekly","Monthly","Quarterly")),
+                                    choices = c("Select","Daily","Weekly","Monthly","Quarterly")),
                         # actionButton("displayAction","Display Dataset as Table",class="displayAction btn-primary center-block")
-                        dateRangeInput("daterange", "Date range:",
-                            start = "2001-01-01",
-                            end   = "2010-12-31")
+                        # dateRangeInput("daterange", "Date range:",
+                        #     start = "2001-01-01",
+                        #     end   = "2010-12-31")
+                        conditionalPanel(
+                            condition="input.oilPrices == 'Daily' || input.oilPrices == 'Weekly'",                            
+                            dateInput("date_range","Start Date",
+                                min = Sys.Date() - (365*5), # 5 year back (default. would be changed in server.R)
+                                max = Sys.Date(),
+                                # value=Sys.Date()
+                            )   
+                        ),
+                        conditionalPanel(
+                            condition="input.oilPrices != 'Daily' && input.oilPrices != 'Weekly'",                            
+                            dateRangeInput("daterange", "Date range:",
+                                start = "2001-01-01",
+                                end   = "2010-12-31")
+                            
+                        )
                         # actionButton('')
                         ),
                 tags$div(id="u_dataset",class="hidden",
@@ -75,8 +91,31 @@ shinyUI(fluidPage(theme = "app.css", #css file to further style the page
                     selectInput("modelSelection","Select a model",
                                 choices=c("None" = "none",
                                     "Linear Model"="linear_model",
-                                           "Time Series (Holt Winters)"="holt_winters",
-                                           "Time Series (Arima)"="arima")),
+                                           "Time Series (Holt Linear)"="holt_linear",
+                                           "Time Series (Simple Exponential Smoothing )"="ses",
+                                           "Time Series (Auto Arima)"="arima",
+                                           "Time Series (Custom Arima)"="c_arima")),
+                    conditionalPanel(
+                        condition="input.modelSelection == 'holt_linear'",
+                        tags$div(class="extra_params1",
+                            numericInput('h_alpha',label="alpha",step=0.1,max=1,min=0.1,value=0.6),
+                            numericInput('h_beta',label="beta",step=0.1,max=1,min=0.1,value=0.2)
+                        )
+                    ),
+                    conditionalPanel(
+                        condition="input.modelSelection == 'ses'",
+                        tags$div(class="extra_params1 form-inline",
+                            numericInput('s_alpha',label="alpha",step=0.1,max=1,min=0.1,value=0.6)                         
+                        )
+                    ),
+                    conditionalPanel(
+                        condition="input.modelSelection == 'c_arima'",
+                        tags$h4("Input Arima order"),                       
+                        tags$div(class="order_section form-inline",
+                            numericInput("first_order",label="",value=1,min=0,max=10),
+                            numericInput("second_order",label="",value=2,min=0,max=10),
+                            numericInput("third_order",label="",value=1,min=0,max=10))                            
+                            ),
                     selectInput("no_of_observations","Select Number of Observations to forecast",
                                         choices = c(1,3,6,9)
                         ),
@@ -90,6 +129,7 @@ shinyUI(fluidPage(theme = "app.css", #css file to further style the page
             )
                 
     ),   
+    
     # Show a plot of the generated distribution
     mainPanel(
       tabsetPanel("tabsets",
