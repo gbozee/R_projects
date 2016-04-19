@@ -7,7 +7,7 @@
 
 library(shiny)
 #library(shinyjs)
-# library(DT)
+library(DT)
 
 mycss <- "
 #plot-container {
@@ -125,10 +125,17 @@ shinyUI(fluidPage(theme = "app.css", #css file to further style the page
             tags$div(id="visual_sidebar",class="hidden",
                 sliderInput("yearSlider", "Years:",
                         min = 0, max = 10000, value = c(200,500), step = 10,
-                        sep = "", animate=TRUE)
+                        sep = "", animate=TRUE),
+               tags$div(id="summary_display",
+                tags$h4("Forecast Summary"),
+                verbatimTextOutput("f_summary")
+                )
+                
+                
             )
                 
     ),   
+    
     # Show a plot of the generated distribution
     mainPanel(
       tabsetPanel("tabsets",
@@ -146,8 +153,9 @@ shinyUI(fluidPage(theme = "app.css", #css file to further style the page
                                 plotOutput('plot_output'),
                                 h2("This is the second panel."),
                                 div(style = 'overflow-x: scroll', DT::dataTableOutput("predicted_table"))   
-                            ) )
-      ))
+                            ) ) )
+                  
+               )
                 #   tabPanel("predicted_data",
                 #             tableOutput("predicted_output")
                 #     )

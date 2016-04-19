@@ -16,7 +16,8 @@ forecast_function<-function(dn,data_point=12,f_type="holt_winters",arima_order=N
         fcast <- ses(dn,h=as.integer(data_point),alpha=alpha,initial="simple")
     }
     if(f_type=="holt_linear"){
-        fcast <- holt(dn,h=as.integer(data_point),alpha=alpha,beta=beta)
+        fcast <- holt(dn,h=as.integer(data_point),alpha=alpha,
+            beta=beta, initial="simple")
     }
     if(f_type == "c_arima"){
         fcast <- forecast(Arima(dn,order=arima_order), h=data_point)
@@ -28,7 +29,7 @@ forecast_function<-function(dn,data_point=12,f_type="holt_winters",arima_order=N
     return(fcast)
 }
 funggcast<-function(dn,data_point=12,f_type="holt_winters",is.date = NULL, ts.connect = TRUE,
-                              arima_order=NULL,alpha=alpha,beta=beta){ 
+                              arima_order=NULL,alpha=NULL,beta=NULL){ 
 	require(zoo) #needed for the 'as.yearmon()' function
     fcast <- forecast_function(dn,data_point,f_type,arima_order=arima_order,alpha=alpha,beta=beta)
     ds <- ggplot2::fortify(fcast, is.date = is.date, ts.connect = ts.connect)
@@ -45,18 +46,6 @@ funggcast<-function(dn,data_point=12,f_type="holt_winters",is.date = NULL, ts.co
  
 }
 
-old_plot <- function(graphset,data.color = 'blue', fit.color = 'red', forec.color = 'black',
-                           lower.fill = 'darkgrey', upper.fill = 'grey'){
-   p <- ggplot(graphset,aes(x=date)) + 
-       geom_line(aes(y=observed,colour="observed")) + 
-       geom_line(aes(y=fitted,colour="fitted")) +
-       geom_line(aes(y = forecast,colour="forecast")) +
-       scale_color_manual('Series', values=c('observed' = "red", 'fitted' = "blue", 'forecast' = "green")) + 
-       geom_ribbon(aes(ymin = lo95, ymax = hi95), alpha = .25) +
-       ylab("Oil Prices Values") + xlab("Years")       
-   return(p)    
-}
-
 ArimaPlot<-function(ts_object,  n.ahead=4,date_type="Monthly",arima_order=NULL){
     graphset <- funggcast(ts_object,data_point=n.ahead,f_type="arima",arima_order=arima_order)
     # graphset$date <- factor(graphset$date, levels=graphset$date[!duplicated(graphset$date)])
@@ -71,6 +60,21 @@ HWplot<-function(ts_object,  n.ahead=4,  date_type="Monthly",f_type="holt_winter
   return(p)
 }
 
+old_plot <- function(graphset,data.color = 'blue', fit.color = 'red', forec.color = 'black',
+                           lower.fill = 'darkgrey', upper.fill = 'grey'){
+   p <- ggplot(graphset,aes(date,observed)) + 
+       geom_line(aes(y=observed,colour="observed")) + 
+       geom_line(aes(y=fitted,colour="fitted")) + 
+    #    geom_line(color="blue") + 
+       geom_line(aes(y = forecast,colour="forecast")) + 
+    #    geom_line(color="green") + 
+       scale_color_manual('Series', values=c('observed' = "red", 'fitted' = "blue", 'forecast' = "green")) + 
+       geom_ribbon(aes(ymin = lo95, ymax = hi95), alpha = .25) +
+       ylab("Oil Prices Values") + xlab("Years")
+       
+   return(p) 
+   
+}
 plot_function <- function(forec.obj, data.color = 'blue', fit.color = 'red', forec.color = 'black',
                            lower.fill = 'darkgrey', upper.fill = 'grey', format.date = F)
 {

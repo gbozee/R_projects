@@ -33,7 +33,7 @@ $(document).ready(function(){
   $('.tabbable .nav.nav-tabs li a').click(function(){
       var tab_text = $(this).text(); // Gets the name of the currently click tab and extract the content;
         $('#table_sidebar').toggleClass("hidden");
-        $('#visual_sidebar').toggleClass("hidden")
+        $('#visual_sidebar').toggleClass("hidden");
       
   })
   //When oilPrice is Empty

@@ -295,25 +295,36 @@ shinyServer(function(input, output,session) {
       plotter$DATE<-as.Date(as.character(plotter$date),format="%Y-%m-%d")
       arima_order <- c(input$first_order,input$second_order,input$third_order)
       alpha_beta <- get_alpha_and_beta_particles()
-      View(alpha_beta)
       new_graph <- plotGraph(plotter,"price",model_type = input$modelSelection,
                              start_year = input$yearSlider[1],
                              observations = input$no_of_observations,
                              date_type=input$oilPrices,
-                             arima_order=arima_order,alpha=alpha_beta[1],
+                             arima_order=arima_order,
+                             alpha=alpha_beta[1],
                              beta=alpha_beta[2])
       new_graph
     })
-    
-    predicted_t <- function(){
+    f_data <- function(default="funggcast"){
       d_slider <- date_from_slider(input$yearSlider)
       user_selected_range <- determine_start_and_end_range(input$date_range,input$daterange,input$oilPrices)
       plotter <-retrieveDatasetInRange(plotter,user_selected_range)
       plotter <- retrieveDatasetInRange(plotter,d_slider)      
       plotter$DATE<-as.Date(as.character(plotter$date),format="%Y-%m-%d")
       ts_data <- get_time_series_object(plotter,input$no_of_observations,input$oilPrices)
-      arima_order <- c(input$first_order,input$second_order,input$third_order)      
-      predicted <- funggcast(ts_data,input$no_of_observations,input$modelSelection,arima_order=arima_order)
+      arima_order <- c(input$first_order,input$second_order,input$third_order)
+      alpha_beta <- get_alpha_and_beta_particles()
+      if(default == "funggcast"){ 
+        predicted <- funggcast(ts_data,input$no_of_observations,input$modelSelection,arima_order=arima_order,
+          alpha=alpha_beta[1], beta=alpha_beta[2])
+      } 
+      else{
+        predicted <- forecast_function(ts_data,input$no_of_observations,input$modelSelection,arima_order=arima_order,
+          alpha=alpha_beta[1], beta=alpha_beta[2])
+      } 
+      return(predicted)
+    }
+    predicted_t <- function(){
+      predicted <- f_data()
       predicted <- predicted[which(
           predicted$forecast != "NA"
         ), 
@@ -334,6 +345,13 @@ shinyServer(function(input, output,session) {
     }
     output$predicted_table <- renderDataTable(
       predicted_t(),options=list())    
+    output$f_summary <- renderPrint({
+      f <- f_data("forecast_function")
+      # print(forecast$model)
+      display_data <- capture.output(summary(f$model))
+      # cat(display_data)
+      print(display_data)
+    })
   })
 
 })
