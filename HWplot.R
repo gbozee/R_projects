@@ -4,27 +4,32 @@ library(reshape)
 library(forecast)
 library(scales)
 
-forecast_function<-function(dn,data_point=12,f_type="holt_winters"){
+forecast_function<-function(dn,data_point=12,f_type="holt_winters",arima_order=NULL,
+    alpha=NULL,beta=NULL){
     require(zoo) #needed for the 'as.yearmon()' function
     if(f_type == "holt_winters"){
-        fcast <- forecast.HoltWinters(HoltWinters(dn), h=data_point)
+        fcast <- hw(dn,h=as.integer(data_point))
+        # fcast <- forecast.HoltWinters(HoltWinters(dn), h=data_point)
         cat("holt_winters")        
-    }else{
-        fcast <- forecast(auto.arima(dn), h=data_point)
+    }else if(f_type=="ses"){
+        fcast <- ses(dn,h=as.integer(data_point),alpha=alpha,initial="simple")
+    }else if(f_type=="holt_linear"){
+        fcast <- holt(dn,h=as.integer(data_point),alpha=alpha,beta=beta)
+    }
+    else{
+        if(f_type == "c_arima"){
+            fcast <- forecast(Arima(dn,order=arima_order), h=data_point)
+        }else{         
+            fcast <- forecast(auto.arima(dn), h=data_point)   
+        }
         cat("arima")    
     }
     return(fcast)
 }
 funggcast<-function(dn,data_point=12,f_type="holt_winters",is.date = NULL, ts.connect = TRUE,
-                              predict.geom = 'line',
-                              predict.colour = '#0000FF', predict.size = NULL,
-                              predict.linetype = NULL, predict.alpha = NULL,
-                              predict.fill = NULL, predict.shape = NULL,
-                              conf.int = TRUE,
-                              conf.int.colour = '#0000FF', conf.int.linetype = 'none',
-                              conf.int.fill = '#000000', conf.int.alpha = 0.3,...){ 
+                              arima_order=NULL){ 
 	require(zoo) #needed for the 'as.yearmon()' function
-    fcast <- forecast_function(dn,data_point,f_type)
+    fcast <- forecast_function(dn,data_point,f_type,arima_order=arima_order)
     ds <- ggplot2::fortify(fcast, is.date = is.date, ts.connect = ts.connect)
     # replace whitespace to underscore to make column name handling easie
     colnames(ds) <- sub(' ', '_', colnames(ds))
@@ -49,29 +54,30 @@ s_var <- function(date_type){
   }
   return(scale_var)
 }
-ArimaPlot<-function(ts_object,  n.ahead=4,  CI=.95,  error.ribbon='green', line.size=1,date_type="Monthly"){
-    f <- forecast_function(ts_object,n.ahead,"arima")
+ArimaPlot<-function(ts_object,  n.ahead=4,date_type="Monthly",arima_order=NULL){
+    f <- forecast_function(ts_object,n.ahead,"arima",arima_order=arima_order)
     graphset <- funggcast(ts_object,data_point=n.ahead,f_type="arima")
-    scale_var <- s_var(date_type)
     # graphset$date <- factor(graphset$date, levels=graphset$date[!duplicated(graphset$date)])
-  p <- old_plot(graphset)
+    p <- old_plot(graphset)
     # p <- plot_function(f)
     return(p)
 }
-HWplot<-function(ts_object,  n.ahead=4,  CI=.95,  error.ribbon='green', line.size=1,date_type="Monthly"){
-    f <- forecast_function(ts_object,n.ahead)
-  graphset <- funggcast(ts_object,n.ahead)
+HWplot<-function(ts_object,  n.ahead=4,  date_type="Monthly",f_type="holt_winters",
+    alpha=NULL,beta=NULL){
+    
+    f <- forecast_function(ts_object,n.ahead,f_type=f_type,alpha=alpha,beta=beta)
+    
+  graphset <- funggcast(ts_object,n.ahead,f_type=f_type)
     scale_var <- s_var(date_type)
   p <- old_plot(graphset)
 #   p <- plot_function(graphset)
   return(p)
-  
 }
 
 old_plot <- function(graphset,data.color = 'blue', fit.color = 'red', forec.color = 'black',
                            lower.fill = 'darkgrey', upper.fill = 'grey'){
    p <- ggplot(graphset,aes(date,observed)) + 
-       geom_line(color="red") + 
+       geom_line(aes(y=observed,colour="observed")) + 
        geom_line(aes(y=fitted,colour="fitted")) + 
     #    geom_line(color="blue") + 
        geom_line(aes(y = forecast,colour="forecast")) + 
@@ -148,4 +154,16 @@ funggcast2<-function(dn,fcast){
 	pd<-merge(ds,dfcastn,all.x=T) #final data.frame for use in ggplot
 	return(pd)
  
+}
+convert_from_decimal_to_date <- function(date_string){
+    date_num <- as.numeric(date_string)
+    year <- floor(date_num)
+    year_beginning <- as.POSIXct(paste0(year, '-01-01'))
+    year_end <- as.POSIXct(paste0(year+1, '-01-01'))
+    date <- year_beginning + (date_num %% 1) * (year_end - year_beginning)
+    
+    final_date <- format(date, format='%Y-%m-%d')
+    # string_val <- as.character(date,)
+    return(final_date)
+    # > 
 }
