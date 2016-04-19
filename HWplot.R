@@ -71,7 +71,7 @@ HWplot<-function(ts_object,  n.ahead=4,  CI=.95,  error.ribbon='green', line.siz
 old_plot <- function(graphset,data.color = 'blue', fit.color = 'red', forec.color = 'black',
                            lower.fill = 'darkgrey', upper.fill = 'grey'){
    p <- ggplot(graphset,aes(date,observed)) + 
-       geom_line(color="red") + 
+       geom_line(aes(y=observed,colour="observed")) + 
        geom_line(aes(y=fitted,colour="fitted")) + 
     #    geom_line(color="blue") + 
        geom_line(aes(y = forecast,colour="forecast")) + 
