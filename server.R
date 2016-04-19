@@ -318,7 +318,6 @@ shinyServer(function(input, output,session) {
           predicted$forecast != "NA"
         ), 
       ] # limits the result to forecasted data.      
-      View(predicted)
       date_column <- predicted$date
       drops <- c("date")
       predicted <- predicted[ , !(names(predicted) %in% drops)]
