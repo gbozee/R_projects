@@ -28,13 +28,13 @@ date_from_slider <- function(vect){
     
 get_time_series_object <- function(plotter,date_type="Monthly"){
     frequency <- switch(date_type,
-        "Monthly"=12,"Weekly"=52,"Quarterly"=4,"Daily"=1)
+        "Monthly"=12,"Weekly"=52,"Quarterly"=4,"Daily"=365)
     # get first and last data 
     start <- first_element_as_a_list(plotter)
     end <- first_element_as_a_list(plotter,length(plotter$date))
     # No end date is set when generating time series for weekly and daily dataset.
     if(date_type == "Weekly" || date_type == "Daily"){     
-      ts_data <- ts(plotter$price,frequency=frequency,start=start) 
+      ts_data <- ts(plotter$price,frequency=frequency,start=start,end=end) 
     }else{      
       ts_data <- ts(plotter$price,frequency=frequency,start=start,end=end)
     }
@@ -135,11 +135,11 @@ retrieveDatasetInRange<-function(dataset,date_range){
     return(plotter)
 }
 
-determine_start_and_end_range <- function(date_input,date_range_input,dataset_selected){
+determine_start_and_end_range <- function(date_input,date_range_input,dataset_selected,end_d=365*1){
   if(dataset_selected == "Weekly" || dataset_selected == "Daily"){
     # We are fixing the range when either weekly or daily is selected.
     start <- date_input
-    end <- date_input + (365*1) # a year addition
+    end <- date_input + end_d # a year addition
     return(c(start,end))
   }
   return(date_range_input)
@@ -241,7 +241,7 @@ shinyServer(function(input, output,session) {
         # new_options <- new_options[2]
         if(input$oilPrices == "Daily" || input$oilPrices == "Weekly"){
           max = max(slider_component)
-          step = 1/12
+          step = 1/4
         }else{
           max = 2016
           step = 1
@@ -279,19 +279,22 @@ shinyServer(function(input, output,session) {
       return(c(al,be))
     }
     output$plot_output <- renderPlot({
-      # generate bins based on input$bins from ui.R
-      # reduces the date to the specified slider
-    #   cat(input$yearSlider)
-    #   plotter <- plotter[which(plotter$date >= as.Date(as.character(input$yearSlider[1]),"%Y") & 
-    #                             plotter$date <= as.Date(as.character(input$yearSlider[2]),"%Y")),]
-    #   plotter <- plotter[which(
-    #       as.numeric(format(as.yearmon(plotter$date),"%Y")) >= input$yearSlider[1] & 
-    #       as.numeric(format(as.yearmon(plotter$date),"%Y")) <= input$yearSlider[2]),]
       d_slider <- date_from_slider(input$yearSlider)
-      user_selected_range <- determine_start_and_end_range(input$date_range,input$daterange,input$oilPrices)
       
-      plotter <-retrieveDatasetInRange(plotter,user_selected_range)
-      plotter <- retrieveDatasetInRange(plotter,d_slider)
+      
+      evaluate_plotter <- function(end_date_value=365){          
+        user_selected_range <- determine_start_and_end_range(input$date_range,input$daterange,input$oilPrices)        
+        plotter <-retrieveDatasetInRange(plotter,user_selected_range)
+        plotter <- retrieveDatasetInRange(plotter,d_slider)
+        return(plotter)
+      }
+      plotter <- evaluate_plotter()
+      if(input$oilPrices == "Daily"){
+        if(length(plotter$date) < 365){
+          # we are ensuring that the length of plotter is atleast 365 when the slider is changed.
+          plotter <- evaluate_plotter(365*2)
+        }
+      }
       plotter$DATE<-as.Date(as.character(plotter$date),format="%Y-%m-%d")
       arima_order <- c(input$first_order,input$second_order,input$third_order)
       alpha_beta <- get_alpha_and_beta_particles()
@@ -334,7 +337,7 @@ shinyServer(function(input, output,session) {
       predicted <- predicted[ , !(names(predicted) %in% drops)]
       the_rownames <- colnames(predicted)
       predicted <- as.data.frame(t(predicted))
-      predicted<- head(predicted,4)
+      # predicted<- head(predicted,4)
       if(input$oilPrices == "Daily" || input$oilPrices == "Weekly"){       
         colnames(predicted) <- sapply(date_column,convert_from_decimal_to_date) 
       } else{
@@ -352,6 +355,18 @@ shinyServer(function(input, output,session) {
       # cat(display_data)
       print(display_data)
     })
+    datasetInputWithResidual <- function(file){
+      predicted <- f_data()
+      f <- f_data("forecast_function")
+      predicted$residuals <- c(f$residuals, rep(NA, nrow(predicted)-length(f$residuals)))
+      View(predicted)
+      write.csv(predicted,file) 
+    }
+    
+    output$downloadData <- downloadHandler(      
+      filename = function() { paste("export_data", '.csv', sep='') },
+      content = datasetInputWithResidual
+    )
   })
 
 })
