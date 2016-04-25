@@ -6,7 +6,7 @@
 #
 
 library(shiny)
-library(Quandl)
+# library(Quandl)
 library(ggfortify)
 library(ggplot2)
 library(reshape2)
@@ -26,7 +26,7 @@ date_from_slider <- function(vect){
         return(c(first,second))
     }
     
-get_time_series_object <- function(plotter,observations,date_type="Monthly"){
+get_time_series_object <- function(plotter,date_type="Monthly"){
     frequency <- switch(date_type,
         "Monthly"=12,"Weekly"=52,"Quarterly"=4,"Daily"=1)
     # get first and last data 
@@ -40,7 +40,7 @@ get_time_series_object <- function(plotter,observations,date_type="Monthly"){
     }
     return(ts_data)
 }
-plotGraph <- function(plotter,variableToForcast,model_type='',start_year=1980,
+plotGraph <- function(plotter,variableToForcast="price",model_type='',start_year=1980,
     observations=1,date_type="Monthly",arima_order=NULL,alpha=NULL,beta=NULL){        
     
   new_graph <- ggplot(plotter,aes_string(x=plotter$DATE,y=variableToForcast)) +
@@ -54,20 +54,20 @@ plotGraph <- function(plotter,variableToForcast,model_type='',start_year=1980,
   if(model_type == 'holt_winters'){
     # function that predicts future values and returns a plot object
     # spent the whole night writing this function
-    ts_data <- get_time_series_object(plotter,observations,date_type)    
+    ts_data <- get_time_series_object(plotter,date_type)    
     new_graph <- HWplot(ts_data,n.ahead=observations,date_type=date_type) 
   }
   if(model_type == "arima"){      
-      ts_data <- get_time_series_object(plotter,observations,date_type)
+      ts_data <- get_time_series_object(plotter,date_type)
     
       new_graph <- ArimaPlot(ts_data,n.ahead=observations,date_type=date_type)
   }
   if(model_type == "c_arima"){
-    ts_data <- get_time_series_object(plotter,observations,date_type)    
+    ts_data <- get_time_series_object(plotter,date_type)    
       new_graph <- ArimaPlot(ts_data,n.ahead=observations,date_type=date_type,arima_order=arima_order)
   }
   if(model_type == "holt_linear" || model_type == "ses"){
-    ts_data <- get_time_series_object(plotter,observations,date_type)
+    ts_data <- get_time_series_object(plotter,date_type)
     new_graph <- HWplot(ts_data,n.ahead=observations,date_type=date_type,f_type=model_type,
       alpha=alpha,beta=beta)
   }
@@ -237,8 +237,8 @@ shinyServer(function(input, output,session) {
    
       observe({
         #plotter<-datasetInput()
-        new_options <- colnames(plotter)
-        new_options <- new_options[2]
+        # new_options <- colnames(plotter)
+        # new_options <- new_options[2]
         if(input$oilPrices == "Daily" || input$oilPrices == "Weekly"){
           max = max(slider_component)
           step = 1/12
@@ -310,7 +310,7 @@ shinyServer(function(input, output,session) {
       plotter <-retrieveDatasetInRange(plotter,user_selected_range)
       plotter <- retrieveDatasetInRange(plotter,d_slider)      
       plotter$DATE<-as.Date(as.character(plotter$date),format="%Y-%m-%d")
-      ts_data <- get_time_series_object(plotter,input$no_of_observations,input$oilPrices)
+      ts_data <- get_time_series_object(plotter,input$oilPrices)
       arima_order <- c(input$first_order,input$second_order,input$third_order)
       alpha_beta <- get_alpha_and_beta_particles()
       if(default == "funggcast"){ 
