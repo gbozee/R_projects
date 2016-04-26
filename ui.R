@@ -112,9 +112,9 @@ shinyUI(fluidPage(theme = "app.css", #css file to further style the page
                         condition="input.modelSelection == 'c_arima'",
                         tags$h4("Input Arima order"),                       
                         tags$div(class="order_section form-inline",
-                            numericInput("first_order",label="",value=1,min=0,max=10),
-                            numericInput("second_order",label="",value=2,min=0,max=10),
-                            numericInput("third_order",label="",value=1,min=0,max=10))                            
+                            numericInput("first_order",label="p",value=1,min=0,max=10),
+                            numericInput("second_order",label="d",value=2,min=0,max=10),
+                            numericInput("third_order",label="q",value=1,min=0,max=10))                            
                             ),
                     selectInput("no_of_observations","Select Number of Observations to forecast",
                                         choices = c(1,3,6,9)
@@ -128,7 +128,8 @@ shinyUI(fluidPage(theme = "app.css", #css file to further style the page
                         sep = "", animate=TRUE),
                tags$div(id="summary_display",
                 tags$h4("Forecast Summary"),
-                verbatimTextOutput("f_summary")
+                verbatimTextOutput("f_summary"),
+                downloadButton('downloadData', 'Export data as csv')
                 )
                 
                 

@@ -67,10 +67,11 @@ old_plot <- function(graphset,data.color = 'blue', fit.color = 'red', forec.colo
        geom_line(aes(y=fitted,colour="fitted")) + 
     #    geom_line(color="blue") + 
        geom_line(aes(y = forecast,colour="forecast")) + 
-    #    geom_line(color="green") + 
+    #    geom_line(color="green") +
+    #    scale_x_datetime(labels = date_format("%b")) +
        scale_color_manual('Series', values=c('observed' = "red", 'fitted' = "blue", 'forecast' = "green")) + 
        geom_ribbon(aes(ymin = lo95, ymax = hi95), alpha = .25) +
-       ylab("Oil Prices Values") + xlab("Years")
+       ylab("Oil Prices Values") + xlab("Years") 
        
    return(p) 
    
