@@ -304,11 +304,13 @@ shinyServer(function(input, output,session) {
                              beta=alpha_beta[2])
       new_graph
     })
-    f_data <- function(default="funggcast"){
+    f_data <- function(default="funggcast",exclude_slider=FALSE){
       d_slider <- date_from_slider(input$yearSlider)
       user_selected_range <- determine_start_and_end_range(input$date_range,input$daterange,input$oilPrices)
       plotter <-retrieveDatasetInRange(plotter,user_selected_range)
-      plotter <- retrieveDatasetInRange(plotter,d_slider)      
+      if(exclude_slider == TRUE){
+         plotter <- retrieveDatasetInRange(plotter,d_slider) 
+      }      
       plotter$DATE<-as.Date(as.character(plotter$date),format="%Y-%m-%d")
       ts_data <- get_time_series_object(plotter,input$no_of_observations,input$oilPrices)
       arima_order <- c(input$first_order,input$second_order,input$third_order)
@@ -324,7 +326,7 @@ shinyServer(function(input, output,session) {
       return(predicted)
     }
     predicted_t <- function(){
-      predicted <- f_data()
+      predicted <- f_data(exclude_slider=TRUE)
       predicted <- predicted[which(
           predicted$forecast != "NA"
         ), 
