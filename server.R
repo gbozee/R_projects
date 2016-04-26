@@ -367,7 +367,14 @@ shinyServer(function(input, output,session) {
     
     output$downloadData <- downloadHandler(      
       filename = function() { paste("export_data", '.csv', sep='') },
-      content = datasetInputWithResidual
+      content = function(file){
+        predicted <- f_data()
+        f <- f_data("forecast_function")
+        predicted$residuals <- c(f$residuals, rep(NA, nrow(predicted)-length(f$residuals)))
+        View(predicted)
+        write.csv(predicted,file) 
+      }
+      # content
     )
   })
 
