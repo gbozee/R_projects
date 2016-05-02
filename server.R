@@ -278,6 +278,9 @@ shinyServer(function(input, output,session) {
       }
       return(c(al,be))
     }
+    # Single zoomable plot (on left)
+    ranges <- reactiveValues(x = NULL, y = NULL)
+
     output$plot_output <- renderPlot({
       d_slider <- date_from_slider(input$yearSlider)
       
@@ -305,6 +308,8 @@ shinyServer(function(input, output,session) {
                              arima_order=arima_order,
                              alpha=alpha_beta[1],
                              beta=alpha_beta[2])
+      new_graph <- new_graph +
+        coord_cartesian(xlim = ranges$x, ylim = ranges$y)
       new_graph
     })
     f_data <- function(default="funggcast",exclude_slider=FALSE){
@@ -376,6 +381,31 @@ shinyServer(function(input, output,session) {
       }
       # content
     )
+    output$downloadData2 <- downloadHandler(      
+      filename = function() { paste("export_data", '.txt', sep='') },
+      content = function(file){
+        f <- f_data("forecast_function")
+        # print(forecast$model)
+        display_data <- capture.output(summary(f$model))
+        write(display_data,file) 
+      }
+      # content
+    )
+    # old_brush <- NULL
+    observe({
+      brush <- input$plot2_brush
+      if (!is.null(brush)) {
+        ranges$x <- c(as.Date(brush$xmin), as.Date(brush$xmax))
+        ranges$y <- c(brush$ymin, brush$ymax)
+        
+      }
+       else {
+        ranges$x <- NULL
+        ranges$y <- NULL
+      }
+        cat(ranges$x)
+        cat(ranges$y)
+    })
   })
 
 })

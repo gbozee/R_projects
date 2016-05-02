@@ -112,6 +112,7 @@ plot_function <- function(forec.obj, data.color = 'blue', fit.color = 'red', for
         ylab("Oil Prices Values")
     
     if (format.date)
+        
         p = p + scale_x_date()
     
     p

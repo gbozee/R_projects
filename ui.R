@@ -129,7 +129,8 @@ shinyUI(fluidPage(theme = "app.css", #css file to further style the page
                tags$div(id="summary_display",
                 tags$h4("Forecast Summary"),
                 verbatimTextOutput("f_summary"),
-                downloadButton('downloadData', 'Export data as csv')
+                downloadButton('downloadData', 'Export data as csv'),
+                downloadButton('downloadData2', 'Export model summary')
                 )
                 
                 
@@ -151,7 +152,11 @@ shinyUI(fluidPage(theme = "app.css", #css file to further style the page
                             tags$img(src = "35.gif", id = "loading-spinner")),
                     conditionalPanel(condition="!$('html').hasClass('shiny-busy')",
                             tags$div(                             
-                                plotOutput('plot_output'),
+                                plotOutput('plot_output',
+                                   brush = brushOpts(
+                                    id = "plot2_brush",
+                                    resetOnNew = FALSE
+                                    )),
                                 h2("This is the second panel."),
                                 div(style = 'overflow-x: scroll', DT::dataTableOutput("predicted_table"))   
                             ) ) )
