@@ -121,9 +121,12 @@ plot_function <- function(forec.obj, data.color = 'blue', fit.color = 'red', for
 convert_from_decimal_to_date <- function(date_string){
     date_num <- as.numeric(date_string)
     year <- floor(date_num)
-    year_beginning <- as.POSIXct(paste0(year, '-01-01'))
-    year_end <- as.POSIXct(paste0(year+1, '-01-01'))
-    date <- year_beginning + (date_num %% 1) * (year_end - year_beginning)
+    frac <- date_num - year 
+    sec_year <- unclass(ISOdate(year+1,1,1,0,0,0)) -  unclass(ISOdate(year,1,1,0,0,0))
+    date <- ISOdate(year,1,1,0,0,0) + frac * sec_year
+    # year_beginning <- as.POSIXct(paste0(year, '-01-01'))
+    # year_end <- as.POSIXct(paste0(year+1, '-01-01'))
+    # date <- year_beginning + (date_num %% 1) * (year_end - year_beginning)
     
     final_date <- format(date, format='%Y-%m-%d')
     # string_val <- as.character(date,)

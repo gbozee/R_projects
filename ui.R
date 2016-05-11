@@ -54,7 +54,7 @@ shinyUI(fluidPage(theme = "app.css", #css file to further style the page
                         #     end   = "2010-12-31")
                         conditionalPanel(
                             condition="input.oilPrices == 'Daily' || input.oilPrices == 'Weekly'",                            
-                            dateInput("date_range","Start Date",
+                            dateInput("date_range","End Date",
                                 min = Sys.Date() - (365*5), # 5 year back (default. would be changed in server.R)
                                 max = Sys.Date(),
                                 # value=Sys.Date()

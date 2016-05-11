@@ -10,6 +10,7 @@ library(shiny)
 library(ggfortify)
 library(ggplot2)
 library(reshape2)
+require(lubridate)
 # library(DT)
 # import this file which plots graph for predicted values
 source("./HWplot.R")
@@ -17,6 +18,7 @@ source("./fetch_dataset.R")
 first_element_as_a_list <- function(plotter,index=1){
    
     year_data <- as.numeric(format(as.Date(as.character(plotter[index,]$date),format="%Y-%m-%d"),"%Y"))
+    # month_data <- yday(as.Date(as.character(plotter[index,]$date),format="%Y-%m-%d"))
     month_data <- as.numeric(format(as.Date(as.character(plotter[index,]$date),format="%Y-%m-%d"),"%m"))
     return(c(year_data,month_data))
 }
@@ -33,10 +35,12 @@ get_time_series_object <- function(plotter,date_type="Monthly"){
     start <- first_element_as_a_list(plotter)
     end <- first_element_as_a_list(plotter,length(plotter$date))
     # No end date is set when generating time series for weekly and daily dataset.
-    if(date_type == "Weekly" || date_type == "Daily"){     
-      ts_data <- ts(plotter$price,frequency=frequency,start=start,end=end) 
+    if(date_type == "Weekly" || date_type == "Daily"){ 
+      # ts_data <- xts(plotter$price,order.by=as.Date(plotter$date),frequency=frequency)
+      ts_data <- ts(plotter$price,start=start,end=end,frequency=frequency) 
     }else{      
-      ts_data <- ts(plotter$price,frequency=frequency,start=start,end=end)
+      # ts_data <- xts(plotter$price,order.by=as.Date(plotter$date),frequency=frequency)
+      ts_data <- ts(plotter$price,start=start,end=end,frequency=frequency)
     }
     return(ts_data)
 }
@@ -45,6 +49,10 @@ plotGraph <- function(plotter,variableToForcast="price",model_type='',start_year
     
   new_graph <- ggplot(plotter,aes_string(x=plotter$DATE,y=variableToForcast)) +
     ylab("Oil Prices Values") + xlab("Years") +geom_line(colour="blue")
+  new_observations <- observations
+  if(date_type == "Weekly" || date_type == "Daily"){
+    new_observations <- as.numeric(observations) + 6 
+  }
   if(model_type == "linear_model"){
     f <- paste(names(plotter)[2], "~", paste(names(plotter)[3]))
     plotter$predicted <- predict(lm(f,data=plotter))    
@@ -63,6 +71,7 @@ plotGraph <- function(plotter,variableToForcast="price",model_type='',start_year
       new_graph <- ArimaPlot(ts_data,n.ahead=observations,date_type=date_type)
   }
   if(model_type == "c_arima"){
+    
     ts_data <- get_time_series_object(plotter,date_type)    
       new_graph <- ArimaPlot(ts_data,n.ahead=observations,date_type=date_type,arima_order=arima_order)
   }
@@ -134,12 +143,21 @@ retrieveDatasetInRange<-function(dataset,date_range){
           as.Date(dataset$date) <= date_range[2]),]
     return(plotter)
 }
+forecast_result_greaterthan_end_date<-function(dataset,end_date,n_row=3){
+  # View(end_date)
+  # dataset$real_date <- sapply(dataset$date,convert_from_decimal_to_date)
+  # View(dataset)
+  result <- dataset[
+    which(as.Date(convert_from_decimal_to_date(dataset$date)) >= end_date),
+  ]
+  return(head(result,n_row))
+}
 
 determine_start_and_end_range <- function(date_input,date_range_input,dataset_selected,end_d=365*1){
   if(dataset_selected == "Weekly" || dataset_selected == "Daily"){
     # We are fixing the range when either weekly or daily is selected.
-    start <- date_input
-    end <- date_input + end_d # a year addition
+    start <- date_input - end_d # a year addition
+    end <- date_input 
     return(c(start,end))
   }
   return(date_range_input)
@@ -179,7 +197,7 @@ shinyServer(function(input, output,session) {
         if(input$oilPrices == "Weekly" || input$oilPrices == "Daily"){
           cat("it is valid")
           updateDateInput(session,'date_range',max=as.Date(end_date)-(365*1),
-            min=as.Date(start_date),value=as.Date(start_date))
+            min=as.Date(start_date),value=as.Date(end_date)-(365*1))
         }
         else{          
           updateDateRangeInput(session, 'daterange', 
@@ -288,7 +306,7 @@ shinyServer(function(input, output,session) {
       evaluate_plotter <- function(end_date_value=365){          
         user_selected_range <- determine_start_and_end_range(input$date_range,input$daterange,input$oilPrices)        
         plotter <-retrieveDatasetInRange(plotter,user_selected_range)
-        plotter <- retrieveDatasetInRange(plotter,d_slider)
+        # plotter <- retrieveDatasetInRange(plotter,d_slider)
         return(plotter)
       }
       plotter <- evaluate_plotter()
@@ -301,9 +319,11 @@ shinyServer(function(input, output,session) {
       plotter$DATE<-as.Date(as.character(plotter$date),format="%Y-%m-%d")
       arima_order <- c(input$first_order,input$second_order,input$third_order)
       alpha_beta <- get_alpha_and_beta_particles()
+      n_of_observations <- input$no_of_observations
+      
       new_graph <- plotGraph(plotter,"price",model_type = input$modelSelection,
                              start_year = input$yearSlider[1],
-                             observations = input$no_of_observations,
+                             observations = n_of_observations,
                              date_type=input$oilPrices,
                              arima_order=arima_order,
                              alpha=alpha_beta[1],
@@ -317,18 +337,28 @@ shinyServer(function(input, output,session) {
       user_selected_range <- determine_start_and_end_range(input$date_range,input$daterange,input$oilPrices)
       plotter <-retrieveDatasetInRange(plotter,user_selected_range)
       if(exclude_slider == TRUE){
-         plotter <- retrieveDatasetInRange(plotter,d_slider) 
+        #  plotter <- retrieveDatasetInRange(plotter,d_slider) 
       }      
       plotter$DATE<-as.Date(as.character(plotter$date),format="%Y-%m-%d")
       ts_data <- get_time_series_object(plotter,input$oilPrices)
       arima_order <- c(input$first_order,input$second_order,input$third_order)
       alpha_beta <- get_alpha_and_beta_particles()
+      n_of_observations <- input$no_of_observations
+      if(input$oilPrices == "Weekly"){
+        n_of_observations <- as.numeric(n_of_observations) + 20
+      }
+      if(input$oilPrices == "Daily"){
+        n_of_observations <- as.numeric(n_of_observations) + 120
+      }
       if(default == "funggcast"){ 
-        predicted <- funggcast(ts_data,input$no_of_observations,input$modelSelection,arima_order=arima_order,
+        predicted <- funggcast(ts_data,n_of_observations,input$modelSelection,arima_order=arima_order,
           alpha=alpha_beta[1], beta=alpha_beta[2])
+        if(input$oilPrices == "Daily" || input$oilPrices == "Weekly"){
+          predicted <- forecast_result_greaterthan_end_date(predicted,user_selected_range[2],input$no_of_observations)
+        }
       } 
       else{
-        predicted <- forecast_function(ts_data,input$no_of_observations,input$modelSelection,arima_order=arima_order,
+        predicted <- forecast_function(ts_data,n_of_observations,input$modelSelection,arima_order=arima_order,
           alpha=alpha_beta[1], beta=alpha_beta[2])
       } 
       return(predicted)
