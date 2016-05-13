@@ -150,7 +150,7 @@ forecast_result_greaterthan_end_date<-function(dataset,end_date,n_row=3){
   result <- dataset[
     which(as.Date(convert_from_decimal_to_date(dataset$date)) >= end_date),
   ]
-  return(head(result,n_row))
+  return(head(result,as.numeric(n_row)))
 }
 
 determine_start_and_end_range <- function(date_input,date_range_input,dataset_selected,end_d=365*1){
