@@ -207,7 +207,6 @@ shinyServer(function(input, output,session) {
     })
   })
   
-  
   observeEvent(input$uploadDataset,{
     updateTextInput(session,"actionSelected",value= "uploadDataset")
   })
@@ -229,7 +228,13 @@ shinyServer(function(input, output,session) {
                                    choices=new_options)
         })
     }else{
-      if(is.null(input$oilPrices) || input$oilPrices == 'Select')
+        
+      output$table_output <- renderDataTable({
+        
+        validate(
+          need(input$oilPrices != "Select","Select either a daily, weekly or monthly dataset")          
+        )
+        if(is.null(input$oilPrices) || input$oilPrices == 'Select')
             return(NULL)
             
       user_selected_range <- determine_start_and_end_range(input$date_range,input$daterange,input$oilPrices)
@@ -242,11 +247,7 @@ shinyServer(function(input, output,session) {
       rev_plotter <- plotter[order(plotter$date,decreasing = TRUE),]
 
       slider_component <- get_years_from_d_frame(plotter$date)      
-            # Increment the top-level progress indicator
-            # incProgress(1)
-            # setProgress(1)     
-        
-      output$table_output <- renderDataTable({
+      
         # plotter$date <- format(plotter$date,'%Y-%m-%d')
         # plotter <- datasetInput()
         rev_plotter
@@ -272,6 +273,9 @@ shinyServer(function(input, output,session) {
   observeEvent(input$visualizeAction,{
     if (is.null(plotter))
       return(NULL)
+    # if(input$modelSelection == "none")
+    #   return(NULL)
+    
 
     if(input$actionSelected == "uploadDataset"){
       inFile <- input$fileUploaded
@@ -299,7 +303,10 @@ shinyServer(function(input, output,session) {
     # Single zoomable plot (on left)
     ranges <- reactiveValues(x = NULL, y = NULL)
 
-    output$plot_output <- renderPlot({
+    output$plot_output <- renderPlot({      
+        validate(
+          need(input$modelSelection != "none","Select a Model")          
+        )
       d_slider <- date_from_slider(input$yearSlider)
       
       
@@ -363,7 +370,10 @@ shinyServer(function(input, output,session) {
       } 
       return(predicted)
     }
-    predicted_t <- function(){
+    predicted_t <- function(){      
+      validate(
+        need(input$modelSelection != "none","No model was selected")          
+      )
       predicted <- f_data(exclude_slider=TRUE)
       predicted <- predicted[which(
           predicted$forecast != "NA"
@@ -386,6 +396,10 @@ shinyServer(function(input, output,session) {
     output$predicted_table <- renderDataTable(
       predicted_t(),options=list())    
     output$f_summary <- renderPrint({
+      
+        validate(
+          need(input$modelSelection != "none","No model was selected")          
+        )
       f <- f_data("forecast_function")
       # print(forecast$model)
       display_data <- capture.output(summary(f$model))

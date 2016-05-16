@@ -26,3 +26,6 @@ pre {
 
 }
 
+.shiny-output-error-validation {
+        color: greenyellow;
+      }

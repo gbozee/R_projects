@@ -47,7 +47,7 @@ shinyUI(fluidPage(theme = "app.css", #css file to further style the page
                             choices= c("")),
                         # default select input before the server loads the dataset
                         selectInput("oilPrices","Choose a dataset:", 
-                                    choices = c("Select","Daily","Weekly","Monthly","Quarterly")),
+                                    choices = c("Select","Daily","Weekly","Monthly")),
                         # actionButton("displayAction","Display Dataset as Table",class="displayAction btn-primary center-block")
                         # dateRangeInput("daterange", "Date range:",
                         #     start = "2001-01-01",
@@ -145,7 +145,7 @@ shinyUI(fluidPage(theme = "app.css", #css file to further style the page
                            tags$p(),
                            h3(id="table_text"),
                            dataTableOutput("table_output"),
-                           h2("This is the first panel.")),
+                           h2("")),
                   tabPanel("visualization",
                     conditionalPanel(condition="$('html').hasClass('shiny-busy')",
                             # tags$div("Loading...",id="loadmessage")),
@@ -157,7 +157,7 @@ shinyUI(fluidPage(theme = "app.css", #css file to further style the page
                                     id = "plot2_brush",
                                     resetOnNew = FALSE
                                     )),
-                                h2("This is the second panel."),
+                                h2(""),
                                 div(style = 'overflow-x: scroll', DT::dataTableOutput("predicted_table"))   
                             ) ) )
                   
