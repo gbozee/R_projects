@@ -44,7 +44,7 @@ get_time_series_object <- function(plotter,date_type="Monthly"){
     }
     return(ts_data)
 }
-plotGraph <- function(plotter,variableToForcast="price",model_type='',start_year=1980,
+plotGraph <- function(plotter,variableToForcast="price",model_type='',
     observations=1,date_type="Monthly",arima_order=NULL,alpha=NULL,beta=NULL){        
     
   new_graph <- ggplot(plotter,aes_string(x=plotter$DATE,y=variableToForcast)) +
@@ -114,8 +114,11 @@ eia_years <- unique(as.numeric(format(as.yearmon(m_eiaoilp$date),"%Y")))
 # bo_years <- unique(as.numeric(format(boilp$date,"%Y")))
 # wo_years <- unique(as.numeric(format(woilp$date,"%Y")))
 get_years_from_d_frame <- function(d_frame){
-    eia_years <- unique(as.numeric(format(as.yearmon(d_frame),"%Y")))
-    return(eia_years)    
+    first = as.Date(d_frame[1])
+        last = as.Date(d_frame[length(d_frame)])        
+    return(c(first,last))
+    # eia_years <- unique(as.numeric(format(as.yearmon(d_frame),"%Y")))
+    # return(eia_years)    
 }
 
 dataSetWithDuration <- function(sourceVal,daterange="Monthly"){
@@ -153,7 +156,7 @@ forecast_result_greaterthan_end_date<-function(dataset,end_date,n_row=3){
   return(head(result,as.numeric(n_row)))
 }
 
-determine_start_and_end_range <- function(date_input,date_range_input,dataset_selected,end_d=365*1){
+determine_start_and_end_range <- function(date_input,date_range_input,dataset_selected,end_d=365*2){
   if(dataset_selected == "Weekly" || dataset_selected == "Daily"){
     # We are fixing the range when either weekly or daily is selected.
     start <- date_input - end_d # a year addition
@@ -162,7 +165,9 @@ determine_start_and_end_range <- function(date_input,date_range_input,dataset_se
   }
   return(date_range_input)
 }
-
+actualDataToPlot <- function(){
+  
+}
 shinyServer(function(input, output,session) {
   plotter <- '' # name of final dataframe to visualize
   slider_component <- NULL
@@ -237,17 +242,17 @@ shinyServer(function(input, output,session) {
         if(is.null(input$oilPrices) || input$oilPrices == 'Select')
             return(NULL)
             
-      user_selected_range <- determine_start_and_end_range(input$date_range,input$daterange,input$oilPrices)
-      plotter<- dataSetWithDuration(input$oilPricesSource,input$oilPrices)
-      plotter <-retrieveDatasetInRange(plotter,user_selected_range)
-      if(input$oilPrices == 'Quarterly'){
-          plotter <- convert_to_quarterly_dataframe(plotter)
-      }
+        user_selected_range <- determine_start_and_end_range(input$date_range,input$daterange,input$oilPrices)
+        plotter<- dataSetWithDuration(input$oilPricesSource,input$oilPrices)
+        plotter <-retrieveDatasetInRange(plotter,user_selected_range)
+        if(input$oilPrices == 'Quarterly'){
+            plotter <- convert_to_quarterly_dataframe(plotter)
+        }
       
-      rev_plotter <- plotter[order(plotter$date,decreasing = TRUE),]
-
-      slider_component <- get_years_from_d_frame(plotter$date)      
-      
+        rev_plotter <- plotter[order(plotter$date,decreasing = TRUE),]
+        
+        slider_component <- get_years_from_d_frame(plotter$date)    
+        
         # plotter$date <- format(plotter$date,'%Y-%m-%d')
         # plotter <- datasetInput()
         rev_plotter
@@ -255,18 +260,26 @@ shinyServer(function(input, output,session) {
       }) 
    
       observe({
+        user_selected_range <- determine_start_and_end_range(input$date_range,input$daterange,input$oilPrices)
+        plotter<- dataSetWithDuration(input$oilPricesSource,input$oilPrices)
+        plotter <-retrieveDatasetInRange(plotter,user_selected_range)
+        slider_component <- get_years_from_d_frame(plotter$date)    
         #plotter<-datasetInput()
         # new_options <- colnames(plotter)
         # new_options <- new_options[2]
-        if(input$oilPrices == "Daily" || input$oilPrices == "Weekly"){
-          max = max(slider_component)
-          step = 1/4
-        }else{
-          max = 2016
+        max = max(slider_component)          
+        if(input$oilPrices == "Daily"){
           step = 1
+        }else if(input$oilPrices == "Weekly"){
+          step = 7
+        }else{
+          # max = 2016
+          # max = max(slider_component)
+          step = 1*30
         }
         updateSliderInput(session,"yearSlider",min=min(slider_component),max=max,
-                        step=step,value = c(min(slider_component),max(slider_component)))
+                        step=step,value = c(min(slider_component),max(slider_component)),
+                        )
       })
     }
   })
@@ -284,9 +297,8 @@ shinyServer(function(input, output,session) {
       plotter <-read.csv(inFile$datapath, header=input$header, sep=input$sep, 
                          quote=input$quote)
     }else{
-        plotter<- dataSetWithDuration(input$oilPricesSource,input$oilPrices)
-        
-     cat(input$yearSlider[1])
+        plotter<- dataSetWithDuration(input$oilPricesSource,input$oilPrices)        
+        cat(input$yearSlider[1])
     }
     get_alpha_and_beta_particles <- function(){
       al <- NULL
@@ -309,7 +321,6 @@ shinyServer(function(input, output,session) {
         )
       d_slider <- date_from_slider(input$yearSlider)
       
-      
       evaluate_plotter <- function(end_date_value=365){          
         user_selected_range <- determine_start_and_end_range(input$date_range,input$daterange,input$oilPrices)        
         plotter <-retrieveDatasetInRange(plotter,user_selected_range)
@@ -329,16 +340,21 @@ shinyServer(function(input, output,session) {
       n_of_observations <- input$no_of_observations
       
       new_graph <- plotGraph(plotter,"price",model_type = input$modelSelection,
-                             start_year = input$yearSlider[1],
                              observations = n_of_observations,
                              date_type=input$oilPrices,
                              arima_order=arima_order,
                              alpha=alpha_beta[1],
                              beta=alpha_beta[2])
-      new_graph <- new_graph +
-        coord_cartesian(xlim = ranges$x, ylim = ranges$y)
+      # if(!is.null(ranges$x) && !is.null(ranges$y)){  
+        # first_date = as.Date(input$yearSlider[1],"")
+        # last_data = as.Date(input$yearSlider[2])      
+        new_graph <- new_graph +
+          xlim(input$yearSlider[1],input$yearSlider[2]) 
+          # coord_cartesian(xlim = ranges$x, ylim = ranges$y) 
+      # }
       new_graph
     })
+    
     f_data <- function(default="funggcast",exclude_slider=FALSE){
       d_slider <- date_from_slider(input$yearSlider)
       user_selected_range <- determine_start_and_end_range(input$date_range,input$daterange,input$oilPrices)
@@ -370,6 +386,7 @@ shinyServer(function(input, output,session) {
       } 
       return(predicted)
     }
+    
     predicted_t <- function(){      
       validate(
         need(input$modelSelection != "none","No model was selected")          
@@ -410,7 +427,6 @@ shinyServer(function(input, output,session) {
       predicted <- f_data()
       f <- f_data("forecast_function")
       predicted$residuals <- c(f$residuals, rep(NA, nrow(predicted)-length(f$residuals)))
-      View(predicted)
       write.csv(predicted,file) 
     }
     
@@ -420,7 +436,6 @@ shinyServer(function(input, output,session) {
         predicted <- f_data()
         f <- f_data("forecast_function")
         predicted$residuals <- c(f$residuals, rep(NA, nrow(predicted)-length(f$residuals)))
-        View(predicted)
         write.csv(predicted,file) 
       }
       # content
@@ -436,6 +451,12 @@ shinyServer(function(input, output,session) {
       # content
     )
     # old_brush <- NULL
+    # observer({
+    #   slider <- input$yearSlider
+    #   if(!is.null(slider)){
+    #     ranges$x <- ''
+    #   }
+    # })
     observe({
       brush <- input$plot2_brush
       if (!is.null(brush)) {

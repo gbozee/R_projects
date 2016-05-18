@@ -1,7 +1,7 @@
 library(ggplot2)
 library(reshape)
 library(forecast)
-# library(scales)
+library(scales)
 
 forecast_function<-function(dn,data_point=12,f_type="holt_winters",arima_order=NULL,
     alpha=NULL,beta=NULL){
@@ -45,7 +45,7 @@ funggcast<-function(dn,data_point=12,f_type="holt_winters",is.date = NULL, ts.co
 
 ArimaPlot<-function(ts_object,  n.ahead=4,date_type="Monthly",arima_order=NULL){
     graphset <- funggcast(ts_object,data_point=n.ahead,f_type="arima",arima_order=arima_order)
-    p <- old_plot(graphset)
+    p <- old_plot(graphset,date_type=date_type)
     return(p)
 }
 HWplot<-function(ts_object,  n.ahead=4,  date_type="Monthly",f_type="holt_winters",
@@ -56,14 +56,24 @@ HWplot<-function(ts_object,  n.ahead=4,  date_type="Monthly",f_type="holt_winter
 }
 
 old_plot <- function(graphset,data.color = 'blue', fit.color = 'red', forec.color = 'black',
-                           lower.fill = 'darkgrey', upper.fill = 'grey'){
-   p <- ggplot(graphset,aes(date,observed)) + 
+                           lower.fill = 'darkgrey', upper.fill = 'grey',date_type="Monthly"){
+   n_graph <- graphset
+   if(date_type == "Monthly"){  
+        n_graph$DATE <- graphset$date       
+   }else{    
+        n_graph$DATE <- as.Date(sapply(graphset$date,convert_from_decimal_to_date))
+      
+   }
+   p <- ggplot(n_graph,aes(DATE,observed)) + 
        geom_line(aes(y=observed,colour="observed")) + 
        geom_line(aes(y=fitted,colour="fitted")) + 
        geom_line(aes(y = forecast,colour="forecast")) + 
        scale_color_manual('Series', values=c('observed' = "red", 'fitted' = "blue", 'forecast' = "green")) + 
        geom_ribbon(aes(ymin = lo95, ymax = hi95), alpha = .25) +
-       ylab("Oil Prices Values") + xlab("Years") 
+       ylab("Oil Prices Values") + xlab("Years") +
+       # This uses the scale library 
+       scale_x_date(breaks=date_breaks("1 month"),minor_breaks=date_breaks("1 month"), 
+            labels="%W") 
        
    return(p) 
    
