@@ -201,7 +201,7 @@ shinyServer(function(input, output,session) {
         }
         else{          
           updateDateRangeInput(session, 'daterange', 
-              start = start_date, end = end_date) 
+              start = start_date, end = end_date,min=start_date,max=end_date) 
         }   
       
     })
