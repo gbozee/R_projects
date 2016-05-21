@@ -35,6 +35,7 @@ shinyUI(fluidPage(theme = "app.css", #css file to further style the page
   sidebarLayout(
     sidebarPanel(
         tags$head(tags$style(HTML(mycss))),
+        actionButton("getLatestData",class="btn btn-block btn-default", "Get Latest Datasets"),
         tags$div(id="table_sidebar",
             textInput("actionSelected",label = ''),
             actionButton("loadDataset",class="btn btn-block btn-default", "Load Available Dataset"),
@@ -43,10 +44,10 @@ shinyUI(fluidPage(theme = "app.css", #css file to further style the page
                    
                 tags$div(id="l_dataset",class="hidden",
                         tags$hr(),
-                        selectInput("oilPricesSource","Select a data source",
+                        selectInput("oilPricesSource","Data Source",
                             choices= c("")),
                         # default select input before the server loads the dataset
-                        selectInput("oilPrices","Choose a dataset:", 
+                        selectInput("oilPrices","Data Frequency", 
                                     choices = c("Select","Daily","Weekly","Monthly")),
                         # actionButton("displayAction","Display Dataset as Table",class="displayAction btn-primary center-block")
                         # dateRangeInput("daterange", "Date range:",
@@ -71,7 +72,7 @@ shinyUI(fluidPage(theme = "app.css", #css file to further style the page
                         ),
                 tags$div(id="u_dataset",class="hidden",
                         tags$hr(),
-                        fileInput('fileUploaded', 'Choose file to upload',
+                        fileInput('fileUploaded', 'Choose file',
                                 accept = c(
                                 'text/csv',
                                 'text/comma-separated-values',
@@ -83,18 +84,18 @@ shinyUI(fluidPage(theme = "app.css", #css file to further style the page
                         checkboxInput('header', 'Header', TRUE),
                         radioButtons('sep', 'Separator', c(Comma=',',Semicolon=';',Tab='\t'),',')
                         ),
-                actionButton("displayAction","Display Dataset as Table",class="displayAction btn-primary center-block")   
+                actionButton("displayAction","Display Data",class="displayAction btn-primary center-block")   
                 
                 ),
             tags$hr(),
             tags$div(id="model_section",class="hidden",
-                    selectInput("modelSelection","Select a model",
+                    selectInput("modelSelection","Model",
                                 choices=c("None" = "none",
                                     "Linear Model"="linear_model",
-                                           "Time Series (Holt Linear)"="holt_linear",
-                                           "Time Series (Simple Exponential Smoothing )"="ses",
-                                           "Time Series (Auto Arima)"="arima",
-                                           "Time Series (Custom Arima)"="c_arima")),
+                                           "Holt Linear"="holt_linear",
+                                           "Simple Exponential Smoothing"="ses",
+                                           "Auto Arima"="arima",
+                                           "Custom Arima"="c_arima")),
                     conditionalPanel(
                         condition="input.modelSelection == 'holt_linear'",
                         tags$div(class="extra_params1",
@@ -116,10 +117,10 @@ shinyUI(fluidPage(theme = "app.css", #css file to further style the page
                             numericInput("second_order",label="d",value=2,min=0,max=10),
                             numericInput("third_order",label="q",value=1,min=0,max=10))                            
                             ),
-                    selectInput("no_of_observations","Select Number of Observations to forecast",
+                    selectInput("no_of_observations","Forecast Period",
                                         choices = c(1,3,6,9)
                         ),
-                    actionButton("visualizeAction","Visualize Dataset",class="btn-info center-block")
+                    actionButton("visualizeAction","Visualise Data",class="btn-info center-block")
                     )
                 ),
             tags$div(id="visual_sidebar",class="hidden",
@@ -131,8 +132,8 @@ shinyUI(fluidPage(theme = "app.css", #css file to further style the page
                tags$div(id="summary_display",
                 tags$h4("Forecast Summary"),
                 verbatimTextOutput("f_summary"),
-                downloadButton('downloadData', 'Export data as csv'),
-                downloadButton('downloadData2', 'Export model summary')
+                downloadButton('downloadData', 'Export data'),
+                downloadButton('downloadData2', 'Export forecast summary')
                 )
                 
                 
@@ -143,12 +144,12 @@ shinyUI(fluidPage(theme = "app.css", #css file to further style the page
     # Show a plot of the generated distribution
     mainPanel(
       tabsetPanel("tabsets",
-                  tabPanel("table",
+                  tabPanel("Table",
                            tags$p(),
                            h3(id="table_text"),
                            dataTableOutput("table_output"),
                            h2("")),
-                  tabPanel("visualization",
+                  tabPanel("Visualization",
                     conditionalPanel(condition="$('html').hasClass('shiny-busy')",
                             # tags$div("Loading...",id="loadmessage")),
                             tags$img(src = "35.gif", id = "loading-spinner")),

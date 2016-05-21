@@ -57,13 +57,13 @@ HWplot<-function(ts_object,  n.ahead=4,  date_type="Monthly",f_type="holt_winter
 
 old_plot <- function(graphset,data.color = 'blue', fit.color = 'red', forec.color = 'black',
                            lower.fill = 'darkgrey', upper.fill = 'grey',date_type="Monthly"){
-   n_graph <- graphset
-   if(date_type == "Monthly"){  
-        n_graph$DATE <- graphset$date       
-   }else{    
-        n_graph$DATE <- as.Date(sapply(graphset$date,convert_from_decimal_to_date))
-      
+   n_graph <- graphset  
+   n_graph$DATE <- graphset$date
+   if(class(n_graph$DATE) == "numeric"){
+       View(class(n_graph$DATE))
+       n_graph$DATE <- as.Date(sapply(n_graph$DATE,convert_from_decimal_to_date))
    }
+   
    p <- ggplot(n_graph,aes(DATE,observed)) + 
        geom_line(aes(y=observed,colour="observed")) + 
        geom_line(aes(y=fitted,colour="fitted")) + 
@@ -72,8 +72,9 @@ old_plot <- function(graphset,data.color = 'blue', fit.color = 'red', forec.colo
        geom_ribbon(aes(ymin = lo95, ymax = hi95), alpha = .25) +
        ylab("Oil Prices Values") + xlab("Years") +
        # This uses the scale library 
-       scale_x_date(breaks=date_breaks("1 month"),minor_breaks=date_breaks("1 month"), 
-            labels="%W") 
+    #    scale_x_date(breaks=date_breaks("1 month"),minor_breaks=date_breaks("1 month"), 
+            # labels="%W") 
+       scale_x_date(breaks = "1 month", minor_breaks = "1 week", labels=date_format("%B"))
        
    return(p) 
    

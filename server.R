@@ -173,6 +173,19 @@ shinyServer(function(input, output,session) {
   slider_component <- NULL
   user_selected_range <- c() # vector to hold the range selected by the user
   
+  observeEvent(input$getLatestData,{
+    withProgress(message = 'Getting latest dataset', value = 0, {
+      # Number of times we'll go through the loop
+      
+      incProgress(1/3, detail = paste("Fetching Eiadata"))
+      fetch_eia_data()
+      incProgress(2/3, detail = paste("Fetching Brent dataset"))
+      fetch_brent_data()
+      incProgress(3/3, detail = paste("Fetching Woil dataset"))
+      fetch_woil_data()     
+    
+    })
+  })
   # EVENT LISTENERS  
   observeEvent(input$loadDataset,{
     updateTextInput(session,"actionSelected",value= "loadDataset")
@@ -234,12 +247,12 @@ shinyServer(function(input, output,session) {
         })
     }else{
         
-      output$table_output <- renderDataTable({
-        
+      output$table_output <- renderDataTable({        
         validate(
           need(input$oilPrices != "Select","Select either a daily, weekly or monthly dataset")          
         )
-        if(is.null(input$oilPrices) || input$oilPrices == 'Select')
+        View(input$oilPrices)
+        if(input$oilPrices == 'Select')
             return(NULL)
             
         user_selected_range <- determine_start_and_end_range(input$date_range,input$daterange,input$oilPrices)
@@ -260,6 +273,14 @@ shinyServer(function(input, output,session) {
       }) 
    
       observe({
+        validate(
+          need(input$oilPrices != "Select","Select either a daily, weekly or monthly dataset")          
+        )
+        View(input$oilPrices)
+        if(input$oilPrices == 'Select')
+            return(NULL)
+            
+        
         user_selected_range <- determine_start_and_end_range(input$date_range,input$daterange,input$oilPrices)
         plotter<- dataSetWithDuration(input$oilPricesSource,input$oilPrices)
         plotter <-retrieveDatasetInRange(plotter,user_selected_range)
