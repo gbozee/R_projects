@@ -39,7 +39,7 @@ funggcast<-function(dn,data_point=12,f_type="holt_winters",is.date = NULL, ts.co
     colnames(ds)[colnames(ds) == 'Lo_95'] <- "lo95"
     colnames(ds)[colnames(ds) == 'Hi_95'] <- "hi95"
  
-	return(ds)
+	return(ds[,c(1,2,3,7,5,4,6,8)])
  
 }
 
@@ -50,7 +50,8 @@ ArimaPlot<-function(ts_object,  n.ahead=4,date_type="Monthly",arima_order=NULL){
 }
 HWplot<-function(ts_object,  n.ahead=4,  date_type="Monthly",f_type="holt_winters",
     alpha=NULL,beta=NULL){    
-  graphset <- funggcast(ts_object,n.ahead,f_type=f_type,alpha=alpha,beta=beta) 
+  graphset <- funggcast(ts_object,n.ahead,f_type=f_type,alpha=alpha,beta=beta)
+  
   p <- old_plot(graphset)
   return(p)
 }

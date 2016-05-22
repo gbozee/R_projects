@@ -35,9 +35,10 @@ shinyUI(fluidPage(theme = "app.css", #css file to further style the page
   sidebarLayout(
     sidebarPanel(
         tags$head(tags$style(HTML(mycss))),
-        actionButton("getLatestData",class="btn btn-block btn-default", "Get Latest Datasets"),
         tags$div(id="table_sidebar",
             textInput("actionSelected",label = ''),
+            actionButton("getLatestData",class="btn btn-block btn-default", "Get Latest Datasets"),
+        
             actionButton("loadDataset",class="btn btn-block btn-default", "Load Available Dataset"),
             actionButton("uploadDataset",class="btn btn-block btn-default","Upload Dataset"),        
             tags$div(class="set_container hidden",
