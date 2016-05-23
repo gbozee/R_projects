@@ -156,11 +156,7 @@ shinyUI(fluidPage(theme = "app.css", #css file to further style the page
                             tags$img(src = "35.gif", id = "loading-spinner")),
                     conditionalPanel(condition="!$('html').hasClass('shiny-busy')",
                             tags$div(                             
-                                plotOutput('plot_output',
-                                   brush = brushOpts(
-                                    id = "plot2_brush",
-                                    resetOnNew = FALSE
-                                    )),
+                                plotOutput('plot_output'),
                                 h2(""),
                                 div(style = 'overflow-x: scroll', DT::dataTableOutput("predicted_table"))   
                             ) ) )

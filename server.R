@@ -251,7 +251,6 @@ shinyServer(function(input, output,session) {
         validate(
           need(input$oilPrices != "Select","Select either a daily, weekly or monthly dataset")          
         )
-        View(input$oilPrices)
         if(input$oilPrices == 'Select')
             return(NULL)
             
@@ -276,7 +275,6 @@ shinyServer(function(input, output,session) {
         validate(
           need(input$oilPrices != "Select","Select either a daily, weekly or monthly dataset")          
         )
-        View(input$oilPrices)
         if(input$oilPrices == 'Select')
             return(NULL)
             
@@ -299,7 +297,7 @@ shinyServer(function(input, output,session) {
           step = 1*30
         }
         updateSliderInput(session,"yearSlider",min=min(slider_component),max=max,
-                        step=step,value = c(min(slider_component),max(slider_component)),
+                        step=step,value = c(min(slider_component),max(slider_component))
                         )
       })
     }
@@ -333,21 +331,19 @@ shinyServer(function(input, output,session) {
       }
       return(c(al,be))
     }
-    # Single zoomable plot (on left)
-    ranges <- reactiveValues(x = NULL, y = NULL)
-
+    evaluate_plotter <- function(end_date_value=365){          
+      user_selected_range <- determine_start_and_end_range(input$date_range,input$daterange,input$oilPrices)        
+      plotter <-retrieveDatasetInRange(plotter,user_selected_range)
+      # plotter <- retrieveDatasetInRange(plotter,d_slider)
+      return(plotter)
+    }
+    
     output$plot_output <- renderPlot({      
         validate(
           need(input$modelSelection != "none","Select a Model")          
         )
       d_slider <- date_from_slider(input$yearSlider)
       
-      evaluate_plotter <- function(end_date_value=365){          
-        user_selected_range <- determine_start_and_end_range(input$date_range,input$daterange,input$oilPrices)        
-        plotter <-retrieveDatasetInRange(plotter,user_selected_range)
-        # plotter <- retrieveDatasetInRange(plotter,d_slider)
-        return(plotter)
-      }
       plotter <- evaluate_plotter()
       if(input$oilPrices == "Daily"){
         if(length(plotter$date) < 365){
@@ -368,10 +364,14 @@ shinyServer(function(input, output,session) {
                              beta=alpha_beta[2])
       # if(!is.null(ranges$x) && !is.null(ranges$y)){  
         # first_date = as.Date(input$yearSlider[1],"")
-        # last_data = as.Date(input$yearSlider[2])      
-        new_graph <- new_graph +
-          xlim(input$yearSlider[1],input$yearSlider[2]) 
-          # coord_cartesian(xlim = ranges$x, ylim = ranges$y) 
+        # last_data = as.Date(input$yearSlider[2])    
+      View(input$yearSlider)
+        if(input$oilPrices == "Monthly"){
+          year_only <- date_from_slider(input$yearSlider)
+        }else{
+          year_only <- input$yearSlider
+        }
+        new_graph <- new_graph + xlim(year_only[1],year_only[2])   
       # }
       new_graph
     })
@@ -429,8 +429,8 @@ shinyServer(function(input, output,session) {
         colnames(predicted) <- date_column
       }
       return(predicted)
-      
     }
+    
     output$predicted_table <- renderDataTable(
       predicted_t(),options=list())    
     output$f_summary <- renderPrint({
@@ -471,27 +471,8 @@ shinyServer(function(input, output,session) {
       }
       # content
     )
-    # old_brush <- NULL
-    # observer({
-    #   slider <- input$yearSlider
-    #   if(!is.null(slider)){
-    #     ranges$x <- ''
-    #   }
-    # })
-    observe({
-      brush <- input$plot2_brush
-      if (!is.null(brush)) {
-        ranges$x <- c(as.Date(brush$xmin), as.Date(brush$xmax))
-        ranges$y <- c(brush$ymin, brush$ymax)
-        
-      }
-       else {
-        ranges$x <- NULL
-        ranges$y <- NULL
-      }
-        cat(ranges$x)
-        cat(ranges$y)
-    })
+
+    
   })
 
 })
